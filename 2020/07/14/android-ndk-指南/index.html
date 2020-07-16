@@ -1,0 +1,775 @@
+<!doctype html>
+<html lang="zh"><head><meta charset="utf-8"><meta name="generator" content="Hexo 4.2.1"><meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1"><meta><title>Android NDK 指南 - l0neman 的博客</title><meta description="前言编写此文档的用意：  作为搭建基础 NDK 工程的教程； 作为入门 NDK 工程的参考手册。  NDK 工程构建可采用三种方式进行 NDK 工程的构建：  基于 Make 的 ndk-build，这是传统的 ndk-build 构建方式，使用 Makefile 方式进行构建，简洁高效； CMake 是新型的构建方式，CMake 具有跨平台的特性，通过 CMake 生成 Makefile 后再进"><meta property="og:type" content="blog"><meta property="og:title" content="Android NDK 指南"><meta property="og:url" content="https://l0neman.github.io/2020/07/14/android-ndk-%E6%8C%87%E5%8D%97/"><meta property="og:site_name" content="l0neman 的博客"><meta property="og:description" content="前言编写此文档的用意：  作为搭建基础 NDK 工程的教程； 作为入门 NDK 工程的参考手册。  NDK 工程构建可采用三种方式进行 NDK 工程的构建：  基于 Make 的 ndk-build，这是传统的 ndk-build 构建方式，使用 Makefile 方式进行构建，简洁高效； CMake 是新型的构建方式，CMake 具有跨平台的特性，通过 CMake 生成 Makefile 后再进"><meta property="og:locale" content="zh_CN"><meta property="og:image" content="https://l0neman.github.io/img/og_image.png"><meta property="article:published_time" content="2020-07-14T15:20:17.000Z"><meta property="article:modified_time" content="2020-07-14T15:20:17.000Z"><meta property="article:author" content="l0neman"><meta property="article:tag" content="Android"><meta property="article:tag" content="NDK"><meta property="article:tag" content="JNI"><meta property="twitter:card" content="summary"><meta property="twitter:image" content="/img/og_image.png"><script type="application/ld+json">{"@context":"https://schema.org","@type":"BlogPosting","mainEntityOfPage":{"@type":"WebPage","@id":"https://l0neman.github.io/2020/07/14/android-ndk-%E6%8C%87%E5%8D%97/"},"headline":"l0neman 的博客","image":["https://l0neman.github.io/img/og_image.png"],"datePublished":"2020-07-14T15:20:17.000Z","dateModified":"2020-07-14T15:20:17.000Z","author":{"@type":"Person","name":"l0neman"},"description":"前言编写此文档的用意：  作为搭建基础 NDK 工程的教程； 作为入门 NDK 工程的参考手册。  NDK 工程构建可采用三种方式进行 NDK 工程的构建：  基于 Make 的 ndk-build，这是传统的 ndk-build 构建方式，使用 Makefile 方式进行构建，简洁高效； CMake 是新型的构建方式，CMake 具有跨平台的特性，通过 CMake 生成 Makefile 后再进"}</script><link rel="canonical" href="https://l0neman.github.io/2020/07/14/android-ndk-%E6%8C%87%E5%8D%97/"><link rel="icon" href="/img/avatar.png"><link rel="stylesheet" href="https://cdnjs.loli.net/ajax/libs/font-awesome/5.12.0/css/all.min.css"><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/highlight.js@9.12.0/styles/atom-one-light.css"><link rel="stylesheet" href="https://fonts.loli.net/css2?family=Ubuntu:wght@400;600&amp;family=Source+Code+Pro"><link rel="stylesheet" href="/css/default.css"><style>body>.footer,body>.navbar,body>.section{opacity:0}</style><!--!--><script>var _hmt = _hmt || [];
+        (function() {
+            var hm = document.createElement("script");
+            hm.src = "//hm.baidu.com/hm.js?1727d76e0a823184efc8776f32a916a9";
+            var s = document.getElementsByTagName("script")[0];
+            s.parentNode.insertBefore(hm, s);
+        })();</script><script src="//busuanzi.ibruce.info/busuanzi/2.3/busuanzi.pure.mini.js" defer></script><!--!--><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/lightgallery@1.6.8/dist/css/lightgallery.min.css"><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/justifiedGallery@3.7.0/dist/css/justifiedGallery.min.css"><!--!--><!--!--><script src="https://cdn.jsdelivr.net/npm/pace-js@1.0.2/pace.min.js"></script></head><body class="is-2-column"><nav class="navbar navbar-main"><div class="container"><div class="navbar-brand justify-content-center"><a class="navbar-item navbar-logo" href="/"><img src="/img/logo.png" alt="l0neman 的博客" height="28"></a></div><div class="navbar-menu"><div class="navbar-start"><a class="navbar-item" href="/">主页</a><a class="navbar-item" href="/archives">归档</a><a class="navbar-item" href="/categories">分类</a><a class="navbar-item" href="/tags">标签</a><a class="navbar-item" href="/about">关于</a></div><div class="navbar-end"><a class="navbar-item" target="_blank" rel="noopener" title="Download on GitHub" href="https://github.com/l0neman"><i class="fab fa-github"></i></a><a class="navbar-item is-hidden-tablet catalogue" title="目录" href="javascript:;"><i class="fas fa-list-ul"></i></a><a class="navbar-item search" title="搜索" href="javascript:;"><i class="fas fa-search"></i></a></div></div></div></nav><section class="section"><div class="container"><div class="columns"><div class="column order-2 column-main is-three-quarters"><div class="card"><article class="card-content article" role="article"><div class="article-meta size-small is-uppercase level is-mobile"><div class="level-left"><time class="level-item" dateTime="2020-07-14T15:20:17.000Z" title="2020-07-14T15:20:17.000Z">2020-07-14</time><span class="level-item"><a class="link-muted" href="/categories/android-%E5%BA%94%E7%94%A8%E5%BC%80%E5%8F%91/">Android 应用开发</a></span><span class="level-item">1 小时 读完 (大约 9823 个字)</span><span class="level-item" id="busuanzi_container_page_pv"><i class="far fa-eye"></i>&nbsp;&nbsp;<span id="busuanzi_value_page_pv">0</span>次访问</span></div></div><h1 class="title is-3 is-size-4-mobile">Android NDK 指南</h1><div class="content"><h1 id="前言"><a href="#前言" class="headerlink" title="前言"></a>前言</h1><p>编写此文档的用意：</p>
+<ol>
+<li>作为搭建基础 NDK 工程的教程；</li>
+<li>作为入门 NDK 工程的参考手册。</li>
+</ol>
+<h1 id="NDK-工程构建"><a href="#NDK-工程构建" class="headerlink" title="NDK 工程构建"></a>NDK 工程构建</h1><p>可采用三种方式进行 NDK 工程的构建：</p>
+<ol>
+<li>基于 Make 的 ndk-build，这是传统的 ndk-build 构建方式，使用 Makefile 方式进行构建，简洁高效；</li>
+<li>CMake 是新型的构建方式，CMake 具有跨平台的特性，通过 CMake 生成 Makefile 后再进行构建，CMake 的配置文件可读性更高；</li>
+<li>其他编译系统，通过引入其他编译系统可对编译过程进行定制，例如引入 obfuscator-llvm 对源码进行混淆和压缩，增强源代码安全性。</li>
+</ol>
+<p>下面是每种构建方式的基础示例，使用 Android Studio 4.0 和 NDK 21 进行如下构建。</p>
+<a id="more"></a>
+
+
+<h2 id="Android-mk"><a href="#Android-mk" class="headerlink" title="Android.mk"></a>Android.mk</h2><p>基于 Android.mk 的产物为 libfoo.so 的 NDK 基本工程搭建。</p>
+<p>在 Android 工程的 src/main 下建立 jni 目录（Android.mk 工程的默认文件目录为 jni，也可指定其他目录进行构建，使用命令 <code>ndk-build -C 目录</code>），工程结构如下：</p>
+<p>包含两个 .mk 文件用来描述 NDK 工程，和两个基本的 C++ 语言源文件，结构如下：</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br></pre></td><td class="code"><pre><span class="line">src&#x2F;main</span><br><span class="line"> |</span><br><span class="line"> +-- java</span><br><span class="line"> +-- jni</span><br><span class="line">      |</span><br><span class="line">      +-- Android.mk</span><br><span class="line">      +-- Application.mk</span><br><span class="line">      +-- libfoo.h</span><br><span class="line">      +-- libfoo.cpp</span><br></pre></td></tr></table></figure>
+
+<p>在 Android Studio 的当前 Module 配置中指明 Android.mk 文件路径:</p>
+<figure class="highlight groovy"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">// app-build.gradle</span></span><br><span class="line"></span><br><span class="line">android &#123;</span><br><span class="line">  ...</span><br><span class="line">  externalNativeBuild &#123;</span><br><span class="line">    ndkBuild &#123;</span><br><span class="line">      path <span class="string">'src/main/jni/Android.mk'</span></span><br><span class="line">    &#125;</span><br><span class="line">  &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p>编写 Android.mk 文件用于向 NDK 构建系统描述工程的 C/C++ 源文件以及共享库的属性。</p>
+<figure class="highlight makefile"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># Android.mk</span></span><br><span class="line"></span><br><span class="line">LOCAL_PATH := <span class="variable">$(<span class="built_in">call</span> my-<span class="built_in">dir</span>)</span></span><br><span class="line"></span><br><span class="line"><span class="keyword">include</span> <span class="variable">$(CLEAR_VARS)</span></span><br><span class="line"></span><br><span class="line"><span class="comment"># 指定共享库名字，产出物为 libfoo.so</span></span><br><span class="line">LOCAL_MODULE := foo</span><br><span class="line"><span class="comment"># 指定源代码文件，多个源代码文件使用空格分隔，换行在行尾使用 \</span></span><br><span class="line">LOCAL_SRC_FILES := main.cpp</span><br><span class="line"></span><br><span class="line"><span class="keyword">include</span> <span class="variable">$(BUILD_SHARED_LIBRARY)</span></span><br></pre></td></tr></table></figure>
+
+<p>添加 Application.mk 用于描述 NDK 工程概要设置。</p>
+<figure class="highlight makefile"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># Application.mk</span></span><br><span class="line"></span><br><span class="line"><span class="comment"># 指定生成特定 ABI 的代码</span></span><br><span class="line">APP_ABI := armeabi-v7a arm64-v8a</span><br><span class="line">APP_OPTIM := debug</span><br></pre></td></tr></table></figure>
+
+<p>在 java 目录创建 Java 类，用于声明 JNI 方法，提供给其他类调用。</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">// class io.l0neman.mkexample.NativeHandler</span></span><br><span class="line"><span class="keyword">public</span> <span class="class"><span class="keyword">class</span> <span class="title">NativeHandler</span> </span>&#123;</span><br><span class="line"></span><br><span class="line">  <span class="keyword">static</span> &#123;</span><br><span class="line">    <span class="comment">// 加载 libfoo.so 库</span></span><br><span class="line">    System.loadLibrary(<span class="string">"foo"</span>);</span><br><span class="line">  &#125;</span><br><span class="line"></span><br><span class="line">  <span class="function"><span class="keyword">public</span> <span class="keyword">static</span> <span class="keyword">native</span> String <span class="title">getHello</span><span class="params">()</span></span>;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p>源代码：</p>
+<figure class="highlight cpp"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">// libfoo.h</span></span><br><span class="line"></span><br><span class="line"><span class="keyword">extern</span> <span class="string">"C"</span> &#123;</span><br><span class="line"></span><br><span class="line"><span class="meta">#<span class="meta-keyword">ifndef</span> NDKTPROJECT_LIBFOO_H</span></span><br><span class="line"><span class="meta">#<span class="meta-keyword">define</span> NDKTPROJECT_LIBFOO_H</span></span><br><span class="line"></span><br><span class="line"><span class="meta">#<span class="meta-keyword">include</span> <span class="meta-string">&lt;jni.h&gt;</span></span></span><br><span class="line"></span><br><span class="line"><span class="comment">// 注册指定 Java 层的 JNI 方法</span></span><br><span class="line">JNIEXPORT jstring JNICALL</span><br><span class="line">Java_io_l0neman_mkexample_NativeHandler_getHello(JNIEnv *env, jclass clazz);</span><br><span class="line"></span><br><span class="line">&#125;;</span><br><span class="line"></span><br><span class="line"><span class="meta">#<span class="meta-keyword">endif</span> <span class="comment">//NDKTPROJECT_LIBFOO_H</span></span></span><br></pre></td></tr></table></figure>
+
+
+
+<figure class="highlight cpp"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">// libfoo.cpp</span></span><br><span class="line"><span class="meta">#<span class="meta-keyword">include</span> <span class="meta-string">"libfoo.h"</span></span></span><br><span class="line"></span><br><span class="line"><span class="function">jstring <span class="title">Java_io_l0neman_mkexample_NativeHandler_getHello</span><span class="params">(JNIEnv *env, jclass clazz)</span> </span>&#123;</span><br><span class="line">  <span class="keyword">return</span> env-&gt;NewStringUTF(<span class="string">"Hello-jni"</span>);</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p>这样的话就完成了一个基本的 NDK 工程搭建，编译后调用代码即可得到 java 字符串 <code>&quot;Hello-jni&quot;</code>。</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">// MainActivity.java</span></span><br><span class="line"></span><br><span class="line">String hello = NativeHandler.getHello();</span><br></pre></td></tr></table></figure>
+
+
+
+<ul>
+<li>提示</li>
+</ul>
+<p>Android.mk 和 Application.mk 中可使用的系统变量请参考下文。</p>
+<p>Android.mk 只是 Makefile 的片段，对于 Makefile 本身的熟悉有助于深入理解和编写 Android.mk，可参考 <a href="/2020/07/14/makefile-指南/">Makfile 指南</a></p>
+<h2 id="CMake"><a href="#CMake" class="headerlink" title="CMake"></a>CMake</h2><p>使用 CMake 和 Android.mk 在 Android Studio 中的构建步骤类似，如下：</p>
+<p>基于 CMake 的产出物为 libfoo.so 的 NDK 基本工程搭建。</p>
+<p>在 Android 工程的 src/main 下建立 cpp 目录，工程结构如下：</p>
+<p>包含一个 CMakeLists.txt 文件来描述 NDK 工程，和两个基本的 C++ 语言文件。</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br></pre></td><td class="code"><pre><span class="line">src&#x2F;main</span><br><span class="line"> |</span><br><span class="line"> +-- java</span><br><span class="line">     jni</span><br><span class="line">      |</span><br><span class="line">      +-- CMakeLists.txt</span><br><span class="line">      +-- libfoo.h</span><br><span class="line">      +-- libfoo.cpp</span><br></pre></td></tr></table></figure>
+
+<p>在 Android Studio 的当前 Module 配置中指明 CMakeLists.txt 文件路径:</p>
+<figure class="highlight groovy"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">// app/build.gradle</span></span><br><span class="line"></span><br><span class="line">android &#123;</span><br><span class="line">  ...</span><br><span class="line">  externalNativeBuild &#123;</span><br><span class="line">    cmake &#123;</span><br><span class="line">      path <span class="string">'src/main/cpp/CMakeLists.txt'</span></span><br><span class="line">    &#125;</span><br><span class="line">  &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p>编写 CMakeLists.txt 文件用于向 NDK 构建系统描述工程的 C/C++ 源文件以及共享库的属性。</p>
+<figure class="highlight cmake"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># CMakeLists.txt</span></span><br><span class="line"></span><br><span class="line"><span class="keyword">cmake_minimum_required</span>(VERSION <span class="number">3.4</span>.<span class="number">3</span>)</span><br><span class="line"></span><br><span class="line"><span class="keyword">add_library</span>(</span><br><span class="line">        <span class="comment"># 共享库名字，生产物为 libfoo.so</span></span><br><span class="line">        foo</span><br><span class="line">        <span class="comment"># 编译为共享库 .so</span></span><br><span class="line">        SHARED</span><br><span class="line">        <span class="comment"># 源代码文件，多个文件使用空格分隔或换行</span></span><br><span class="line">        main.cpp</span><br><span class="line">)</span><br></pre></td></tr></table></figure>
+
+<p>此时将 Android.mk 工程中的 Java 源文件 NativeHandler.java 复制过来，将 libfoo.cpp 和 libfoo.h 内容填入中即可直接编译测试。</p>
+<h2 id="独立工具链"><a href="#独立工具链" class="headerlink" title="独立工具链"></a>独立工具链</h2><p>有时编译 NDK 工程有一些特殊需求，例如对代码进行混淆，加入第三方编译器 obfuscator-llvm 对 NDK 工程进行编译。这时就需要搭建第三方工具链的编译环境，将它加入 NDK 的一般构建过程中。</p>
+<p>下面是一个引入 obfuscator-llvm 编译器编译代码的示例。</p>
+<h3 id="obfuscator-llvm-构建"><a href="#obfuscator-llvm-构建" class="headerlink" title="obfuscator-llvm 构建"></a>obfuscator-llvm 构建</h3><p>环境：android-ndk-r14b，目前已知此版本可支持 obfuscator-llvm 的编译配置</p>
+<p>ndk r14b 下载地址：<a href="https://developer.android.google.cn/ndk/downloads/older_releases">https://developer.android.google.cn/ndk/downloads/older_releases</a></p>
+<ul>
+<li>首先下载编译器，指定最新版本的 obfuscator-llvm 分支，将仓库克隆至本地</li>
+</ul>
+<figure class="highlight shell"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">git clone -b llvm-4.0 https://github.com/obfuscator-llvm/obfuscator.git</span><br></pre></td></tr></table></figure>
+
+<ul>
+<li>编译出编译器的可执行文件</li>
+</ul>
+<p>过程如下，以下命令 Windows DOS 和 Linux Shell 中可通用：</p>
+<ol>
+<li>进入编译器仓库目录中 <code>cd obfuscator</code>；</li>
+<li>创建临时文件目录 <code>mkdir build</code>；</li>
+<li>进入临时文件目录 <code>cd build</code>；</li>
+<li>使用 CMake 生成 Makefile 或者 Vs 解决方案：</li>
+</ol>
+<p>如果没有按照 CMake，可去 CMake 官网下载安装。</p>
+<figure class="highlight shell"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">cmake -DCMAKE_BUILD_TYPE=Release -DLLVM_INCLUDE_TESTS=OFF ../</span><br></pre></td></tr></table></figure>
+
+<p>CMake 将会自动检测电脑上的编译器环境，如果是 Linux，生成 Makefile，如果 Windows 上安装了 Visual Studio，将生成解决方案文件。</p>
+<ol start="5">
+<li>编译编译器源代码：</li>
+</ol>
+<p>Linux 上执行：</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">make -j4</span><br></pre></td></tr></table></figure>
+
+<p>Windows 平台建议使用 Visual Studio 进行编译，直接打开 build 中的 LLVM.sln，然后生成解决方案（Build Solution）。</p>
+<p>编译过程需要持续 30 分钟或更长时间，取决于电脑配置 CPU 性能。</p>
+<p>编译过程中有可能出现错误，需要自己解决出现的不同情况，编译完成后将生成所需的 bin 和 lib 目录（Release 中）。</p>
+<ul>
+<li>配置 NDK 环境</li>
+</ul>
+<p>设原始 NDK 工具链根目录为 android-ndk-r14b。</p>
+<p>进入 android-ndk-r14b/toolchains 目录中，复制已存在的 llvm 目录到 ollvm-4.0，Linux 使用 <code>cp llvm ollvm-4.0</code>，Windows 复制文件出现 <code>llvm-副本</code> 后重命名为 <code>ollvm-4.0</code>。</p>
+<p>Windows 平台将上面编译出来的 bin 和 lib 放入 ollvm-4.0/prebuilt/windows-x86_64 中，Linux 平台放入 ollvm-4.0/prebuilt/linux-x86_64 中，macOS 为 ollvm-4.0/prebuilt/darwin-x86_64。</p>
+<p>进入 android-ndk-r14b/build/core/toolchains 中，在当前目录复制出如下目录：</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line">arm-linux-androideabi-clang -&gt; arm-linux-androideabi-clang-ollvm4.0</span><br><span class="line">aarch64-linux-android-clang -&gt; aarch64-linux-android-clang-ollvm4.0</span><br><span class="line">x86-clang                   -&gt; x86-clang-ollvm4.0</span><br><span class="line">x86_64-clang                -&gt; x86_64-clang-ollvm4.0</span><br></pre></td></tr></table></figure>
+
+<p>修改复制后的两个目录中的 setup.mk 文件：</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line">android-ndk-r14b&#x2F;build&#x2F;core&#x2F;toolchains&#x2F;arm-linux-androideabi-clang-ollvm4.0&#x2F;setup.mk</span><br><span class="line">android-ndk-r14b&#x2F;build&#x2F;core&#x2F;toolchains&#x2F;aarch64-linux-android-clang-ollvm4.0&#x2F;setup.mk</span><br><span class="line">android-ndk-r14b&#x2F;build&#x2F;core&#x2F;toolchains&#x2F;arm-linux-androideabi-clang-ollvm4.0&#x2F;setup.mk</span><br><span class="line">android-ndk-r14b&#x2F;build&#x2F;core&#x2F;toolchains&#x2F;x86_64-clang-ollvm4.0&#x2F;setup.mk</span><br></pre></td></tr></table></figure>
+
+<p>将每个 <code>setup.mk</code> 中的如下内容：</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">LLVM_TOOLCHAIN_PREBUILT_ROOT :&#x3D; $(call get-toolchain-root,llvm)</span><br></pre></td></tr></table></figure>
+
+<p>替换为：</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">OLLVM_NAME :&#x3D; ollvm-4.0</span><br><span class="line">LLVM_TOOLCHAIN_PREBUILT_ROOT :&#x3D; $(call get-toolchain-root,$(OLLVM_NAME))</span><br></pre></td></tr></table></figure>
+
+<p>此时使用 ndk-build 将可以识别编译器。复制 4 个目录的原因是为了支持编译出每种 ABI，（armeabi、armeabi-v7a、arm64-v8a，x86、x86_64）。</p>
+<ul>
+<li>编译代码测试</li>
+</ul>
+<p>进入 NDK 工程中，修改 Application.mk 和 Android.mk 如下：</p>
+<figure class="highlight makefile"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># Application.mk</span></span><br><span class="line"></span><br><span class="line">APP_ABI := armeabi-v7a arm64-v8a</span><br><span class="line"><span class="comment"># 主要是此句指定编译器</span></span><br><span class="line">NDK_TOOLCHAIN_VERSION := clang-ollvm4.0</span><br></pre></td></tr></table></figure>
+
+
+
+<figure class="highlight makefile"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># Android.mk</span></span><br><span class="line"></span><br><span class="line">LOCAL_PATH := <span class="variable">$(<span class="built_in">call</span> my-<span class="built_in">dir</span>)</span></span><br><span class="line"></span><br><span class="line"><span class="keyword">include</span> <span class="variable">$(CLEAR_VARS)</span></span><br><span class="line"></span><br><span class="line">LOCAL_MODULE := foo</span><br><span class="line">LOCAL_SRC_FILES := libfoo.cpp</span><br><span class="line"></span><br><span class="line"><span class="comment"># 添加 obfuscator-llvm 支持的各种参数，伪控制流、控制流展开、指令替换</span></span><br><span class="line">LOCAL_CFLAGS += -mllvm -bcf -mllvm -bcf_loop=3 \</span><br><span class="line">                -mllvm -fla -mllvm -split \</span><br><span class="line">                -mllvm -sub -mllvm -sub_loop=3</span><br><span class="line"></span><br><span class="line"><span class="keyword">include</span> <span class="variable">$(BUILD_SHARED_LIBRARY)</span></span><br></pre></td></tr></table></figure>
+
+<p>在包含源代码的 jni 目录下执行配置好的 NDK r14b 中的 ndk-build 编译即可。</p>
+<ul>
+<li>验证结果</li>
+</ul>
+<p>编译后，在 libs 中将出现 ABI 目录，使用 IDA Pro 打开 libfoo.so，左侧 Functions windos 中找一个简单函数（例如 JNI_OnLoad）打开，发现程序逻辑流程已被混淆的面目全非。</p>
+<p>左下角的 Graph overview 可以直观的看到整个函数的逻辑流程，非常复杂，无法直接了解到原始逻辑。</p>
+<h2 id="构建技巧"><a href="#构建技巧" class="headerlink" title="构建技巧"></a>构建技巧</h2><h3 id="独立构建"><a href="#独立构建" class="headerlink" title="独立构建"></a>独立构建</h3><p>通常 NDK 构建过程需要依赖于 Android Studio 进行清理，构建等工作。</p>
+<p>有时需要脱离 Android Studio，例如在无界面的服务器上独立构建，那么可以直接使用 <code>ndk-build</code> 命令行进行构建。</p>
+<p>首先确认 NDK 的环境变量（将 NDK 工具链的根路径加入系统 PATH 变量）。然后直接在 jni 目录下打开终端（Windows 为 cmd），输入 <code>ndk-build clean</code>，将自动清理产生的 obj 文件和 libs 文件。</p>
+<p>然后执行 <code>ndk-build</code> 即可构建出所需要的 so 文件，例如 libs/arm64-v8a/libfoo.so。</p>
+<p>如果不想在 jni 目录中构建，可使用 <code>-C</code> 选项指定路径构建 <code>ndk-build -C jni_new</code>。</p>
+<p>其他参数可参考官方文档：<a href="https://developer.android.google.cn/ndk/guides/ndk-build">https://developer.android.google.cn/ndk/guides/ndk-build</a></p>
+<ul>
+<li>提示</li>
+</ul>
+<p>对于普通 Android Studio 中的工程，也可以使用这种方法构建。</p>
+<p>首先把 gradle 中 Android.mk 路径配置去除。在默认的依赖配置里面可以看到，libs 目录已被加入依赖，就是说如果 libs 目录中有 so 文件，那么会被自动加入 apk 中。</p>
+<figure class="highlight groovy"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">// app/build.gradle</span></span><br><span class="line">dependencies &#123;</span><br><span class="line">    implementation fileTree(<span class="string">dir:</span> <span class="string">'libs'</span>, <span class="string">include:</span> [<span class="string">'*.jar'</span>])</span><br><span class="line">    ...</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p>那么经过 <code>ndk-build</code> 构建后，可以直接运行 apk 工程，新的 libfoo.so 将被加入 apk 的 libs 目录中。</p>
+<p>此时 Android Studio 构建和清理均不会影响 libs 中的 .so 文件，Java 代码和 NDK 开发代码可分别独立构建。</p>
+<h3 id="快速部署"><a href="#快速部署" class="headerlink" title="快速部署"></a>快速部署</h3><p>对于一个主要由 native 代码构成的应用来说，修改 native 代码的动作较为频繁，如果每次都 clean 然后重新 build，再依赖于 Android studio 的运行安装会可能会比较麻烦。有时也需要依赖于其他 IDE 来构建 NDK 工程（例如使用 Visual Studio），那么可以采用如下方法：</p>
+<p>首次构建 NDK 工程后安装运行到手机上，然后后面每次构建出 so，使用 adb 命令直接将 so 文件 push 到应用的沙盒目录下，重新启动应用进程即可使用新版的 so 文件。</p>
+<figure class="highlight shell"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">adb push libfoo.so /data/data/io.l0neman.mkexample/lib/</span><br></pre></td></tr></table></figure>
+
+<p>注意 so 文件的架构应与当前应用采用的 ABI 对应。</p>
+<p>不过这样做的前提是设备拥有 root 权限，也可直接使用官方的 Android 模拟器，选择下载带有 GoogleApis 的模拟器 ROM，输入如下命令即可获取 root 权限：</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">adb root</span><br><span class="line">adb remount</span><br></pre></td></tr></table></figure>
+
+<p>之后 adb 将以 root 用户的身份运行。</p>
+<h1 id="Android-mk-变量参考"><a href="#Android-mk-变量参考" class="headerlink" title="Android.mk 变量参考"></a>Android.mk 变量参考</h1><h2 id="变量命名规范"><a href="#变量命名规范" class="headerlink" title="变量命名规范"></a>变量命名规范</h2><p>NDK 构建系统保留了如下变量名称，在定义自己的变量时尽量避免这些规则：</p>
+<ol>
+<li>以 <code>LOCAL_</code> 开头的名称，例如 <code>LOCAL_MODULE</code>；</li>
+<li>以 <code>PRIVATE_</code>、<code>NDK_</code> 或 <code>APP</code> 开头的名称，构建系统内部使用了这些变量名；</li>
+<li>小写名称，例如 <code>my-dir</code>，构建系统内部使用了这些变量名。</li>
+</ol>
+<p>最好以 <code>MY_</code> 附加在自己的变量开头。</p>
+<h2 id="NDK-定义的-include-变量"><a href="#NDK-定义的-include-变量" class="headerlink" title="NDK 定义的 include 变量"></a>NDK 定义的 include 变量</h2><ul>
+<li>CLEAR_VARS</li>
+</ul>
+<p>此变量指向一个用于清理变量的脚本，当包含它时，会清理几乎所有的 <code>LOCAL_XXX</code> 变量，不包含 <code>LOCAL_PATH</code> 变量，一般在描述新模块之前包含。</p>
+<figure class="highlight makefile"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">include</span> <span class="variable">$(CLEAR_VARS)</span></span><br></pre></td></tr></table></figure>
+
+<ul>
+<li>BUILD_EXECUTABLE</li>
+</ul>
+<p>指明构建的产出物是一个可执行文件（无文件后缀名），需要在源代码中包含一个 main 函数。通常构建可执行文件用来测试或用于其他调试工具。</p>
+<figure class="highlight cpp"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">// foo.cpp</span></span><br><span class="line"><span class="function"><span class="keyword">int</span> <span class="title">main</span><span class="params">(<span class="keyword">int</span> argv, <span class="keyword">char</span> **args)</span> </span>&#123;</span><br><span class="line">  <span class="built_in">printf</span>(<span class="string">"Hello World!\n"</span>);</span><br><span class="line">  <span class="keyword">return</span> <span class="number">0</span>;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+
+
+<figure class="highlight makefile"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">include</span> <span class="variable">$(BUILD_EXECUTABLE)</span></span><br></pre></td></tr></table></figure>
+
+<ul>
+<li>BUILD_SHARED_LIBRARY</li>
+</ul>
+<p>指明构建的产出物是一个共享库（文件后缀为 .so），它会随着应用代码打包至 apk 中。</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">include $(BUILD_SHARED_LIBRARY)</span><br></pre></td></tr></table></figure>
+
+<ul>
+<li>BUILD_STATIC_LIBRARY</li>
+</ul>
+<p>指明构建的产出物是一个静态库（文件后缀为 .a），它不会被打包至 apk 中，只是为了被其他 native 模块引用。</p>
+<ul>
+<li>PREBUILT_SHARED_LIBRARY</li>
+</ul>
+<p>用于描述预编译共享库的构建，此时 <code>LOCAL_SRC_FILES</code> 变量指向预编译库的路径。</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">LOCAL_SRC_FILES :&#x3D; $(TARGET_ARCH_ABI)&#x2F;libbar.so</span><br><span class="line">include $(PREBUILT_SHARED_LIBRARY)</span><br></pre></td></tr></table></figure>
+
+<ul>
+<li>PREBUILT_STATIC_LIBRARY</li>
+</ul>
+<p>用于描述预编译静态库的构建，此时 <code>LOCAL_SRC_FILES</code> 变量指向预编译库的路径。</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">LOCAL_SRC_FILES :&#x3D; $(TARGET_ARCH_ABI)&#x2F;libbar.a</span><br><span class="line">include $(PREBUILT_STATIC_LIBRARY)</span><br></pre></td></tr></table></figure>
+
+
+
+<h2 id="目标信息变量"><a href="#目标信息变量" class="headerlink" title="目标信息变量"></a>目标信息变量</h2><p>构建系统会根据 <code>APP_ABI</code> 变量（在 Application.mk 中定义）指定的每个 ABI 分别解析一次 Android.mk，如下变量将在构建系统每次解析时被重新定义值。</p>
+<ul>
+<li>TARGET_ARCH</li>
+</ul>
+<p>对应 CPU 系列，为 <code>arm</code>、<code>arm64</code>、<code>x86</code>、<code>x86_64</code>。</p>
+<ul>
+<li>TARGET_PLATFORM</li>
+</ul>
+<p>指向 Android API 级别号，例如 Android 5.1 对应 22。可以这样使用：</p>
+<figure class="highlight makefile"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">ifeq</span> (<span class="variable">$(TARGET_PLATFORM)</span>,android-22)</span><br><span class="line">    <span class="comment"># ... do something ...</span></span><br><span class="line"><span class="keyword">endif</span></span><br></pre></td></tr></table></figure>
+
+<ul>
+<li>TARGET_ARCH_ABI</li>
+</ul>
+<p>对应每种 CPU 对应架构的 ABI。</p>
+<table>
+<thead>
+<tr>
+<th>CPU and architecture</th>
+<th>Setting</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>ARMv7</td>
+<td>armeabi-v7a</td>
+</tr>
+<tr>
+<td>ARMv8 AArch64</td>
+<td>arm64-v8a</td>
+</tr>
+<tr>
+<td>i6686</td>
+<td>x86</td>
+</tr>
+<tr>
+<td>x86-64</td>
+<td>x86_64</td>
+</tr>
+</tbody></table>
+<p>检查 ABI：</p>
+<figure class="highlight makefile"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">ifeq</span> (<span class="variable">$(TARGET_ARCH_ABI)</span>,arm64-v8a)</span><br><span class="line">  <span class="comment"># ... do something ...</span></span><br><span class="line"><span class="keyword">endif</span></span><br></pre></td></tr></table></figure>
+
+<ul>
+<li>TARGET_ABI</li>
+</ul>
+<p>目标 Android API 级别与 ABI 的串联值。检查在 Android API 级别 22 上运行的 64 位 ARM 设备：</p>
+<figure class="highlight makefile"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">ifeq</span> (<span class="variable">$(TARGET_ABI)</span>,android-22-arm64-v8a)</span><br><span class="line">  <span class="comment"># ... do something ...</span></span><br><span class="line"><span class="keyword">endif</span></span><br></pre></td></tr></table></figure>
+
+
+
+<h2 id="模块描述变量"><a href="#模块描述变量" class="headerlink" title="模块描述变量"></a>模块描述变量</h2><p>下面的变量用于向构建系统描述如可构建一个模块，每个模块都应遵守如下流程：</p>
+<ol>
+<li>使用 CLEAR_VARS 变量清理与上一个模块相关的变量；</li>
+<li>为用于描述模块的变量赋值；</li>
+<li>包含 BUILD_XXX 变量以适当的构建脚本用于该模块的构建。</li>
+</ol>
+<ul>
+<li>LOCAL_PATH</li>
+</ul>
+<p>用于指定当前文件的路径，必须在 Android.mk 文件开头定义此变量。</p>
+<p><code>CLEAR_VARS</code> 指向的脚本不会清除此变量。</p>
+<figure class="highlight makefile"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># my-dir 是一个宏函数，返回当前 Android.mk 文件路径</span></span><br><span class="line">LOCAL_PATH := <span class="variable">$(<span class="built_in">call</span> my-<span class="built_in">dir</span>)</span></span><br></pre></td></tr></table></figure>
+
+<ul>
+<li>LOCAL_MODULE</li>
+</ul>
+<p>用于向构建系统描述模块名称，对于 .so 和 .a 文件，系统会自动给名称添加 <code>lib</code> 前缀和文件扩展名。</p>
+<figure class="highlight makefile"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># 产出 libfoo.so 或 libfoo.a</span></span><br><span class="line">LOCAL_MODULE := foo</span><br></pre></td></tr></table></figure>
+
+<ul>
+<li>LOCAL_MODULE_FILENAME</li>
+</ul>
+<p>向构建系统描述模块的自定义名称，覆盖 <code>LOCAL_MODULE</code> 的名称。</p>
+<figure class="highlight makefile"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line">LOCAL_MODULE := foo</span><br><span class="line"><span class="comment"># 产出 libnewfoo.so，但无法改变扩展名</span></span><br><span class="line">LOCAL_MODULE_FILENAME := libnewfoo</span><br></pre></td></tr></table></figure>
+
+<ul>
+<li>LOCAL_SRC_FILES</li>
+</ul>
+<p>向构建系统描述生成模块时所用的源文件列表，务必使用 Unix 样式的正斜杠 (/) 来描述路径，且避免使用绝对路径。</p>
+<ul>
+<li>LOCAL_CPP_EXTENSION</li>
+</ul>
+<p>为 C++ 源文件指定除 .cpp 外的扩展名。</p>
+<figure class="highlight makefile"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">LOCAL_CPP_EXTENSION := .cxx</span><br></pre></td></tr></table></figure>
+
+<p>或指定多个：</p>
+<figure class="highlight makefile"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">LOCAL_CPP_EXTENSION := .cxx .cpp .cc</span><br></pre></td></tr></table></figure>
+
+<ul>
+<li>LOCAL_CPP_FEATURES</li>
+</ul>
+<p>向构建系统指明代码所依赖于的特定 C++ 功能。避免使用 <code>LOCAL_CPPFLAGS</code> 声明，它会导致编译器将所有指定的标记用于所有模块。</p>
+<figure class="highlight makefile"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># 使用运行时信息</span></span><br><span class="line">LOCAL_CPP_FEATURES := rtti</span><br></pre></td></tr></table></figure>
+
+
+
+<figure class="highlight makefile"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># 使用 C++ 异常</span></span><br><span class="line">LOCAL_CPP_FEATURES := exceptions</span><br></pre></td></tr></table></figure>
+
+<p>指定多个：</p>
+<figure class="highlight makefile"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">LOCAL_CPP_FEATURES := rtti features</span><br></pre></td></tr></table></figure>
+
+<ul>
+<li>LOCAL_C_INCLUDES</li>
+</ul>
+<p>指定路径列表，以便在编译时添加到 include 搜索路径。搜索路径同时影响 ndk-gdb 调试路径。</p>
+<figure class="highlight makefile"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">LOCAL_C_INCLUDES := sources/foo</span><br></pre></td></tr></table></figure>
+
+<p>通过 <code>LOCAL_CFLAGS</code> 或 <code>LOCAL_CPPFLAGS</code> 设置任何对应的包含标记前定义此变量。</p>
+<ul>
+<li>LOCAL_CFLAGS</li>
+</ul>
+<p>构建 C 和 C++ 源文件时构建系统要传递的编译器标记，<code>LOCAL_CPPFLAGS</code> 可仅为 C++ 源文件指定标记。</p>
+<p>相关：GCC 编译器选项参考 <a href="https://gcc.gnu.org/onlinedocs/gcc/C_002b_002b-Dialect-Options.html#C_002b_002b-Dialect-Options">https://gcc.gnu.org/onlinedocs/gcc/C_002b_002b-Dialect-Options.html#C_002b_002b-Dialect-Options</a></p>
+<figure class="highlight makefile"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># 指定额外 include 路径，推荐用 LOCAL_C_INCLUDES</span></span><br><span class="line">LOCAL_CFLAGS += -I&lt;path&gt;,</span><br></pre></td></tr></table></figure>
+
+<ul>
+<li>LOCAL_CPPFLAGS</li>
+</ul>
+<p>只构建 C++ 源文件传递的一组编译器标记，放在 <code>LOCAL_CFLAGS</code> 变量定义的后面。</p>
+<ul>
+<li>LOCAL_STATIC_LIBRARIES</li>
+</ul>
+<p>存储当前模块依赖的静态库模块列表</p>
+<ol>
+<li>如果当前模块是共享库或可执行文件，此变量强制这些库链接到生成的二进制文件；</li>
+<li>如果当前模块是静态库，此变量指出依赖于当前模块的其他模块也会依赖于其列出的库。</li>
+</ol>
+<ul>
+<li>LOCAL_SHARED_LIBRARIES</li>
+</ul>
+<p>此变量列出此模块在运行时依赖的共享库模块。用于将相应的连链接信息嵌入到生成的文件中。</p>
+<ul>
+<li>LOCAL_WHOLE_STATIC_LIBRARIES</li>
+</ul>
+<p><code>LOCAL_STATIC_LIBRARIES</code> 的变体形式，表示链接器应将相关的库模块视为完整归档（链接所有符号，而不只是用到的），<br>可参考 ld 链接器的 <code>--whole-archive</code> 选项。</p>
+<ul>
+<li>LOCAL_LDLIBS</li>
+</ul>
+<p>列出在构建共享库或可执行文件时使用的额外链接器标记，使用 <code>-l</code> 前缀来指明连接到特定系统库（一般用于链接 NDK 提供的公开系统库，例如 liblog）。</p>
+<figure class="highlight makefile"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># 链接 /system/lib/libz.so 模块</span></span><br><span class="line">LOCAL_LDLIBS := -lz</span><br></pre></td></tr></table></figure>
+
+<ul>
+<li>LOCAL_LDFLAGS</li>
+</ul>
+<p>列出构建系统在构建共享库或可执行文件时使用的其他链接器标记。</p>
+<figure class="highlight makefile"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># 在 ARM/X86 上使用 ld.bfd 链接器</span></span><br><span class="line">LOCAL_LDFLAGS += -fuse-ld=bfd</span><br></pre></td></tr></table></figure>
+
+<p>定义静态库时，构建系统会忽略此变量，<code>ndk-build</code> 会打印警告。</p>
+<ul>
+<li>LOCAL_ALLOW_UNDEFINED_SYMBOLS</li>
+</ul>
+<p>默认情况下，构建系统在尝试构建共享库时遇到未定义的引用，将会抛出“未定义的符号”错误，指定此变量为 <code>true</code>，将停用此检查（可能会导致运行时加载）。</p>
+<p>定义静态库时，构建系统会忽略此变量，<code>ndk-build</code> 会打印警告。</p>
+<ul>
+<li>LOCAL_ARM_MODE</li>
+</ul>
+<p>默认情况下，构建系统会以 thumb 模式生成 ARM 目标二进制文件，其中每条指令都是 16 位宽，并与 thumb/ 目录中的 STL 库链接。将此变量定义为 arm 会强制构建系统以 32 位 arm 模式生成模块的对象文件。</p>
+<figure class="highlight makefile"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">LOCAL_ARM_MODE := arm</span><br></pre></td></tr></table></figure>
+
+<p>或者对源文件名附加 .arm 后缀，指示构建系统仅以 arm 模式构建特定的源文件。</p>
+<figure class="highlight makefile"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># 以 ARM 模式编译 bar.c，但根据 LOCAL_ARM_MODE 的值构建 foo.c</span></span><br><span class="line">LOCAL_SRC_FILES := foo.c bar.c.arm</span><br></pre></td></tr></table></figure>
+
+<p>也可以在 Application.mk 文件中将 APP_OPTIM 设置为 debug，强制构建系统生成 ARM 二进制文件。指定 debug 会强制构建 ARM，因为工具链调试程序无法正确处理 Thumb 代码。</p>
+<ul>
+<li>LOCAL_ARM_NEON</li>
+</ul>
+<p>此变量仅在以 armeabi-v7a ABI 为目标时才有意义。它允许在 C 和 C++ 源文件中使用 ARM Advanced SIMD (NEON) 编译器固有特性，以及在 Assembly 文件中使用 NEON 指令</p>
+<p>并非所有基于 ARMv7 的 CPU 都支持 NEON 扩展指令集。因此，必须执行运行时检测，以便在运行时安全地使用此代码。</p>
+<figure class="highlight makefile"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># 以 Thumb 和 NEON 支持编译 foo.c，以 Thumb 支持编译 bar.c，并以 ARM 和 NEON 支持编译 zoo.c</span></span><br><span class="line">LOCAL_SRC_FILES = foo.c.neon bar.c zoo.c.arm.neon</span><br></pre></td></tr></table></figure>
+
+<p>同时使用这两个后缀时，<code>.arm</code> 必须在 <code>.neon</code> 前面。</p>
+<ul>
+<li>LOCAL_DISABLE_FORMAT_STRING_CHECKS</li>
+</ul>
+<p>默认情况下，构建系统会在编译代码时保护格式字符串。这样的话，如果 <code>printf</code> 样式的函数中使用了非常量格式的字符串，就会强制引发编译器错误。</p>
+<p>可通过将此变量的值设置为 true 将其停用，不建议停用。</p>
+<ul>
+<li>LOCAL_EXPORT_CFLAGS</li>
+</ul>
+<p>记录一组 C/C++ 编译器标记，这些标记将被添加到使用通过 LOCAL_STATIC_LIBRARIES 或 LOCAL_SHARED_LIBRARIES 变量所描述模块的其他模块的 LOCAL_CFLAGS 定义中。</p>
+<p>如下，foo 模块被 bar 模块依赖，那么标记 <code>-DFOO=1</code> 将在 bar 模块构建时和 <code>-DBAR=2</code> 一起传递至编译器。</p>
+<figure class="highlight makefile"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">include</span> <span class="variable">$(CLEAR_VARS)</span></span><br><span class="line">LOCAL_MODULE := foo</span><br><span class="line">LOCAL_SRC_FILES := foo/foo.c</span><br><span class="line">LOCAL_EXPORT_CFLAGS := -DFOO=1</span><br><span class="line"><span class="keyword">include</span> <span class="variable">$(BUILD_STATIC_LIBRARY)</span></span><br><span class="line"></span><br><span class="line"><span class="keyword">include</span> <span class="variable">$(CLEAR_VARS)</span></span><br><span class="line">LOCAL_MODULE := bar</span><br><span class="line">LOCAL_SRC_FILES := bar.c</span><br><span class="line">LOCAL_CFLAGS := -DBAR=2</span><br><span class="line">LOCAL_STATIC_LIBRARIES := foo</span><br><span class="line"><span class="keyword">include</span> <span class="variable">$(BUILD_SHARED_LIBRARY)</span></span><br></pre></td></tr></table></figure>
+
+<p>构建系统单独编译 foo 模块时，不会将 -DFoo 标记传递至编译器。</p>
+<p>如果有其他模块例如 zoo 依赖于 bar，那么标记将被传递。</p>
+<ul>
+<li>LOCAL_EXPORT_CPPFLAGS</li>
+</ul>
+<p>与 <code>LOCAL_EXPORT_CFLAGS</code> 相同，但仅适用于 C++ 标记。</p>
+<ul>
+<li>LOCAL_EXPORT_C_INCLUDES</li>
+</ul>
+<p>与 <code>LOCAL_EXPORT_CFLAGS</code> 相同，但适用于 C include 路径。</p>
+<ul>
+<li>LOCAL_EXPORT_LDFLAGS</li>
+</ul>
+<p>与 <code>LOCAL_EXPORT_CFLAGS</code> 相同，但适用于链接器标记。</p>
+<ul>
+<li>LOCAL_EXPORT_LDLIBS</li>
+</ul>
+<p>此变量与 <code>LOCAL_EXPORT_CFLAGS</code> 相同，用于指示构建系统将特定系统库的名称传递到编译器。请在您指定的每个库名称前附加 -l</p>
+<p>构建系统会将导入的链接器标记附加到模块的 <code>LOCAL_LDLIBS</code> 变量值上。其原因在于 Unix 链接器的工作方式</p>
+<p>对于静态库会很有用：</p>
+<figure class="highlight makefile"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">include</span> <span class="variable">$(CLEAR_VARS)</span></span><br><span class="line">LOCAL_MODULE := foo</span><br><span class="line">LOCAL_SRC_FILES := foo/foo.c</span><br><span class="line">LOCAL_EXPORT_LDLIBS := -llog</span><br><span class="line"><span class="keyword">include</span> <span class="variable">$(BUILD_STATIC_LIBRARY)</span></span><br><span class="line"></span><br><span class="line"><span class="keyword">include</span> <span class="variable">$(CLEAR_VARS)</span></span><br><span class="line">LOCAL_MODULE := bar</span><br><span class="line">LOCAL_SRC_FILES := bar.c</span><br><span class="line">LOCAL_STATIC_LIBRARIES := foo</span><br><span class="line"><span class="keyword">include</span> <span class="variable">$(BUILD_SHARED_LIBRARY)</span></span><br></pre></td></tr></table></figure>
+
+<p>那么构建系统在构建 libbar.so 时，将在链接器命令的末尾指定 -llog。告知链接器，由于 libbar.so 依赖于 foo，所以它也依赖于系统日志记录库。</p>
+<ul>
+<li>LOCAL_SHORT_COMMANDS</li>
+</ul>
+<p>当模块有很多源文件和/或依赖的静态或共享库时，请将此变量设置为 <code>true</code>，这样会强制构建系统将 <code>@</code> 语法用于包含中间对象文件或链接库的归档。</p>
+<p>此功能在 Windows 上可能很有用，在 Windows 上，命令行最多只接受 8191 个字符，这对于复杂的项目来说可能太少。它还会影响个别源文件的编译，而且将几乎所有编译器标记都放在列表文件内。</p>
+<p>此功能会减慢构建速度。</p>
+<ul>
+<li>LOCAL_THIN_ARCHIVE</li>
+</ul>
+<p>构建静态库时，请设置为 <code>true</code>。这样会生成一个瘦归档，即一个库文件，其中不含对象文件，而只包含它通常包含的实际对象的文件路径。</p>
+<p>在非静态库模块或预构建的静态库模块中，将会忽略此变量。</p>
+<ul>
+<li>LOCAL_FILTER_ASM</li>
+</ul>
+<p>请将此变量定义为一个 shell 命令，供构建系统用于过滤根据您为 <code>LOCAL_SRC_FILES</code> 指定的文件提取或生成的汇编文件。定义此变量会导致发生以下情况：</p>
+<ol>
+<li>构建系统从任何 C 或 C++ 源文件生成临时汇编文件，而不是将它们编译到对象文件中；</li>
+<li>构建系统在任何临时汇编文件以及 <code>LOCAL_SRC_FILES</code> 中所列任何汇编文件的 <code>LOCAL_FILTER_ASM</code> 中执行 shell 命令，因此会生成另一个临时汇编文件；</li>
+<li>构建系统将这些过滤的汇编文件编译到对象文件中。</li>
+</ol>
+<figure class="highlight makefile"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line">LOCAL_SRC_FILES  := foo.c bar.S</span><br><span class="line">LOCAL_FILTER_ASM :=</span><br><span class="line"></span><br><span class="line">foo.c --1--&gt; $OBJS_DIR/foo.S.original --2--&gt; $OBJS_DIR/foo.S --3--&gt; $OBJS_DIR/foo.o</span><br><span class="line">bar.S</span><br></pre></td></tr></table></figure>
+
+<p>“1”对应于编译器，“2”对应于过滤器，“3”对应于汇编程序。过滤器必须是一个独立的 shell 命令，它接受输入文件名作为第一个参数，接受输出文件名作为第二个参数。例如：</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">myasmfilter $OBJS_DIR&#x2F;foo.S.original $OBJS_DIR&#x2F;foo.S</span><br><span class="line">myasmfilter bar.S $OBJS_DIR&#x2F;bar.S</span><br></pre></td></tr></table></figure>
+
+
+
+<h2 id="NDK-提供的函数宏"><a href="#NDK-提供的函数宏" class="headerlink" title="NDK 提供的函数宏"></a>NDK 提供的函数宏</h2><p>NDK 提供了一些 GNU Make 的函数宏，使用 <code>$(call &lt;function&gt;)</code> 调用求值，返回相应文本信息。</p>
+<ul>
+<li>my-dir</li>
+</ul>
+<p>返回最后包括的 makefile 的路径，通常是当前 Android.mk 的目录。</p>
+<p>由于 GNU Make 的工作方式，这个宏实际返回的是构建系统解析构建脚本时包含的最后一个 makefile 的路径。因此，包括其他文件后就不应调用 my-dir，可以提前把返回值保存起来，避免受影响。</p>
+<figure class="highlight makefile"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br></pre></td><td class="code"><pre><span class="line">MY_LOCAL_PATH := <span class="variable">$(<span class="built_in">call</span> my-<span class="built_in">dir</span>)</span></span><br><span class="line"></span><br><span class="line">LOCAL_PATH := <span class="variable">$(MY_LOCAL_PATH)</span></span><br><span class="line"></span><br><span class="line"><span class="comment"># ... declare one module</span></span><br><span class="line"></span><br><span class="line"><span class="keyword">include</span> <span class="variable">$(LOCAL_PATH)</span>/foo/`Android.mk`</span><br><span class="line"></span><br><span class="line">LOCAL_PATH := <span class="variable">$(MY_LOCAL_PATH)</span></span><br><span class="line"></span><br><span class="line"><span class="comment"># ... declare another module</span></span><br></pre></td></tr></table></figure>
+
+<ul>
+<li>all-subdir-makefiles</li>
+</ul>
+<p>返回位于当前 my-dir 路径所有子目录中的 Android.mk 文件列表</p>
+<p>利用此函数，您可以为构建系统提供深度嵌套的源目录层次结构。默认情况下，NDK 只在 Android.mk 文件所在的目录中查找文件。</p>
+<ul>
+<li>this-makefile</li>
+</ul>
+<p>返回当前 makefile（构建系统从中调用函数）的路径。</p>
+<ul>
+<li>parent-makefile</li>
+</ul>
+<p>返回包含树中父 makefile 的路径（包含当前 makefile 的 makefile 的路径）。</p>
+<ul>
+<li>grand-parent-makefile</li>
+</ul>
+<p>返回包含树中祖父 makefile 的路径（包含当前父 makefile 的 makefile 的路径）。</p>
+<ul>
+<li>import-module</li>
+</ul>
+<p>此函数用于按模块名称来查找和包含模块的 Android.mk 文件：</p>
+<figure class="highlight makefile"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line"><span class="variable">$(<span class="built_in">call</span> import-module,&lt;name&gt;)</span></span><br></pre></td></tr></table></figure>
+
+<p>构建系统在 <code>NDK_MODULE_PATH</code> 环境变量所引用的目录列表中查找具有 <code>&lt;name&gt;</code> 标记的模块，并且自动包括其 Android.mk 文件</p>
+<h1 id="Application-mk-变量参考"><a href="#Application-mk-变量参考" class="headerlink" title="Application.mk 变量参考"></a>Application.mk 变量参考</h1><p>Application.mk 指定 NDK 工程的项目级设置。</p>
+<p>许多参数具有模块等效项，例如，<code>APP_CFLAGS</code> 对应于 <code>LOCAL_CFLAGS</code>，基于特定模块的选项优于项目级的选项。</p>
+<p>对于标记来说，如果两者都使用，那么特定于模块的标记将后出现在命令行中，因此它们会替换项目级设置。</p>
+<ul>
+<li>APP_ABI</li>
+</ul>
+<p>默认情况下，NDK 构建系统会为所有有效的 ABI 生成代码。可以使用 APP_ABI 设置为特定 ABI 生成代码。</p>
+<table>
+<thead>
+<tr>
+<th>Instruction set</th>
+<th>Value</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>32-bit ARMv7</td>
+<td>APP_ABI := armeabi-v7a</td>
+</tr>
+<tr>
+<td>64-bit ARMv8 (AArch64)</td>
+<td>APP_ABI := arm64-v8a</td>
+</tr>
+<tr>
+<td>x86</td>
+<td>APP_ABI := X86</td>
+</tr>
+<tr>
+<td>x86-64</td>
+<td>APP_ABI := x86_64</td>
+</tr>
+<tr>
+<td>All supported ABIs (default)</td>
+<td>APP_ABI：= all</td>
+</tr>
+</tbody></table>
+<p>可指定多个值：</p>
+<figure class="highlight makefile"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">APP_ABI := armeabi-v7a arm64-v8a x86</span><br></pre></td></tr></table></figure>
+
+<p>Gradle 中的 <code>externalNativeBuild</code> 设置会忽略 <code>APP_ABI</code>。需要在 <code>splits</code> 块内部使用 <code>abiFilters</code> 块或 <code>abi</code> 块。</p>
+<ul>
+<li>APP_ASFLAGS</li>
+</ul>
+<p>要传递给项目中每个汇编源文件（.s 和 .S 文件）的编译器的标记。</p>
+<p><code>ASFLAGS</code> 与 <code>ASMFLAGS</code> 不同。后者专用于 YASM 源文件。</p>
+<p>APP_BUILD_SCRIPT</p>
+<p>如需从其他位置加载 Android.mk 文件，将 <code>APP_BUILD_SCRIPT</code> 设置为 Android.mk 文件的绝对路径。</p>
+<p>Gradle 中的 <code>externalNativeBuild</code> 块将根据 <code>externalNativeBuild.ndkBuild.path</code> 变量自动设置此路径。</p>
+<ul>
+<li>APP_CFLAGS</li>
+</ul>
+<p>为项目中的所有 C/C++ 编译传递的标记。</p>
+<ul>
+<li>APP_CLANG_TIDY</li>
+</ul>
+<p>为项目中的所有模块启用 clang-tidy，将此标记设置为 <code>True</code>。默认为停用状态。</p>
+<ul>
+<li>APP_CLANG_TIDY_FLAGS</li>
+</ul>
+<p>要为项目中的所有 clang-tidy 执行传递的标记。</p>
+<ul>
+<li>APP_CONLYFLAGS</li>
+</ul>
+<p>要为项目中的所有 C 编译传递的标记。这些标记不会用于 C++ 代码。</p>
+<ul>
+<li>APP_CPPFLAGS</li>
+</ul>
+<p>要为项目中的所有 C++ 编译传递的标记。这些标记不会用于 C 代码。</p>
+<ul>
+<li>APP_CXXFLAGS</li>
+</ul>
+<p><code>APP_CPPFLAGS</code> 应优先于 <code>APP_CXXFLAGS</code>。</p>
+<p>与 <code>APP_CPPFLAGS</code> 相同，但在编译命令中将出现在 <code>APP_CPPFLAGS</code> 之后。例如：</p>
+<figure class="highlight makefile"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">APP_CPPFLAGS := -DFOO</span><br><span class="line">APP_CXXFLAGS := -DBAR</span><br></pre></td></tr></table></figure>
+
+<p>以上配置将导致编译命令类似于 <code>clang++ -DFOO -DBAR</code>，而不是 <code>clang++ -DBAR -DFOO</code>。</p>
+<ul>
+<li>APP_DEBUG</li>
+</ul>
+<p>构建可调试的应用，将此标记设置为 <code>True</code>。</p>
+<ul>
+<li>APP_LDFLAGS</li>
+</ul>
+<p>关联可执行文件和共享库时要传递的标记。</p>
+<p>这些标记对静态库没有影响。不会关联静态库。</p>
+<ul>
+<li>APP_MANIFEST</li>
+</ul>
+<p>AndroidManifest.xml 文件的绝对路径。</p>
+<p>默认情况下将使用 $(APP_PROJECT_PATH)/AndroidManifest.xml)（如果存在）。</p>
+<p>使用 <code>externalNativeBuild</code> 时，Gradle 不会设置此值。</p>
+<ul>
+<li>APP_MODULES</li>
+</ul>
+<p>要构建的模块的显式列表。此列表的元素是模块在 Android.mk 文件的 <code>LOCAL_MODULE</code> 中显示的名称。</p>
+<p>默认情况下，ndk-build 将构建所有共享库、可执行文件及其依赖项。仅当项目使用静态库、项目仅包含静态库或者在 <code>APP_MODULES</code> 中指定了静态库时，才会构建静态库。</p>
+<p>不会构建导入的模块（在使用 $(call import-module) 导入的构建脚本中定义的模块），除非要在 APP_MODULES 中构建或列出的模块依赖导入的模块。</p>
+<ul>
+<li>APP_OPTIM</li>
+</ul>
+<p>定义为 <code>release</code> 或 <code>debug</code>。默认情况下，将构建 <code>relase</code> 模式的二进制文件。</p>
+<p><code>release</code> 模式会启用优化，并可能生成无法与调试程序一起使用的二进制文件。<code>debug</code> 模式会停用优化，以便可以使用调试程序。</p>
+<p>应用清单的 <code>&lt;application&gt;</code> 标记中声明 <code>android:debuggable</code> 将导致此变量默认为 <code>debug</code>，而不是 <code>release</code>。将 <code>APP_OPTIM</code> 设置为 <code>release</code> 可替换此默认值。</p>
+<p>使用 externalNativeBuild 进行构建时，Android Studio 将根据您的构建风格适当地设置此标记。</p>
+<ul>
+<li>APP_PLATFORM</li>
+</ul>
+<p>声明构建此应用所面向的 Android API 级别，并对应于应用的 <code>minSdkVersion</code>。</p>
+<p>如果未指定，ndk-build 将以 NDK 支持的最低 API 级别为目标。最新 NDK 支持的最低 API 级别总是足够低，支持几乎所有有效设备。</p>
+<p>将 <code>APP_PLATFORM</code> 设置为高于应用的 <code>minSdkVersion</code> 可能会生成一个无法在旧设备上运行的应用。在大多数情况下，库将无法加载，因为它们引用了在旧设备上不可用的符号。</p>
+<p>使用 Gradle 和 <code>externalNativeBuild</code> 时，不应直接设置此参数。而应在模块级别 build.gradle 文件的 <code>defaultConfig</code> 或 <code>productFlavors</code> 块中设置 <code>minSdkVersion</code> 属性。这样就能确保只有在运行足够高 Android 版本的设备上安装的应用才能使用您的库。</p>
+<p>NDK 不包含 Android 每个 API 级别的库，省略了不包含新的原生 API 的版本以节省 NDK 中的空间。ndk-build 按以下优先级降序使用 API：</p>
+<ol>
+<li>匹配 <code>APP_PLATFORM</code> 的平台版本。</li>
+<li>低于 <code>APP_PLATFORM</code> 的下一个可用 API 级别。例如，<code>APP_PLATFORM</code> 为 <code>android-20</code> 时，将使用 <code>android-19</code>，因为 <code>android-20</code> 中没有新的原生 API;</li>
+<li>NDK 支持的最低 API 级别。</li>
+</ol>
+<ul>
+<li>APP_PROJECT_PATH</li>
+</ul>
+<p>项目根目录的绝对路径。</p>
+<ul>
+<li>APP_SHORT_COMMANDS</li>
+</ul>
+<p><code>LOCAL_SHORT_COMMANDS</code> 的项目级等效项。</p>
+<ul>
+<li>APP_STL</li>
+</ul>
+<p>用于此应用的 C++ 标准库。</p>
+<p>默认情况下使用 <code>system STL</code>。其他选项包括 <code>c++_shared</code>、<code>c++_static</code> 和 <code>none</code>。</p>
+<ul>
+<li>APP_STRIP_MODE</li>
+</ul>
+<p>要为此应用中的模块传递给 <code>strip</code> 的参数。默认为 <code>--strip-unneeded</code>。若要避免剥离模块中的所有二进制文件，请将其设置为 <code>none</code>。</p>
+<ul>
+<li>APP_THIN_ARCHIVE</li>
+</ul>
+<p>为项目中的所有静态库使用瘦归档，将此变量设置为 <code>True</code>。</p>
+<ul>
+<li>APP_WRAP_SH</li>
+</ul>
+<p>要包含在此应用中的 <code>wrap.sh</code> 文件的路径。</p>
+<p>每个 ABI 都存在此变量的变体，ABI 通用变体也是如此：</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line">APP_WRAP_SH</span><br><span class="line">APP_WRAP_SH_armeabi-v7a</span><br><span class="line">APP_WRAP_SH_arm64-v8a</span><br><span class="line">APP_WRAP_SH_x86</span><br><span class="line">APP_WRAP_SH_x86_64</span><br></pre></td></tr></table></figure>
+
+<p><code>APP_WRAP_SH_&lt;abi&gt;</code> 可能无法与 <code>APP_WRAP_SH</code> 结合使用。如果有任何 ABI 使用特定于 ABI 的 <code>wrap.sh</code>，所有 ABI 都必须使用该 <code>wrap.sh</code>。</p>
+<h1 id="NDK-API"><a href="#NDK-API" class="headerlink" title="NDK API"></a>NDK API</h1><p>NDK 开发几乎必须要使用到 NDK 提供的原生 API，最常用的就是 <code>liblog</code>，用来在 logcat 中打印日志，下面分别使用 Android.mk 和 CMake 引入日志库。</p>
+<p>引入其他库方法一致，可用 NDK 库列表可参考官方文档：<a href="https://developer.android.google.cn/ndk/guides/stable_apis">https://developer.android.google.cn/ndk/guides/stable_apis</a></p>
+<h2 id="Android-mk-1"><a href="#Android-mk-1" class="headerlink" title="Android.mk"></a>Android.mk</h2><p>非常简单，只需要在 Android.mk 文件中使用 <code>LOCAL_LDLIBS</code> 变量使用 <code>-l</code> 前缀描述需要连接的库即可：</p>
+<figure class="highlight makefile"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># Android.mk</span></span><br><span class="line"></span><br><span class="line">LOCAL_PATH := <span class="variable">$(<span class="built_in">call</span> my-<span class="built_in">dir</span>)</span></span><br><span class="line"></span><br><span class="line"><span class="variable">$(<span class="built_in">warning</span> <span class="variable">$(TARGET_PLATFORM)</span>)</span></span><br><span class="line"></span><br><span class="line"><span class="keyword">include</span> <span class="variable">$(CLEAR_VARS)</span></span><br><span class="line"></span><br><span class="line">LOCAL_MODULE := foo</span><br><span class="line">LOCAL_SRC_FILES := libfoo.cpp</span><br><span class="line"></span><br><span class="line"><span class="comment"># 添加日志库，需要添加其他库可直接使用空格分隔</span></span><br><span class="line">LOCAL_LDLIBS := -llog</span><br><span class="line"></span><br><span class="line"><span class="keyword">include</span> <span class="variable">$(BUILD_SHARED_LIBRARY)</span></span><br></pre></td></tr></table></figure>
+
+<p>此时在源代码中即可使用 <code>android/log.h</code> 引入日志打印方法了。</p>
+<figure class="highlight c++"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">// libfoo.cpp</span></span><br><span class="line"></span><br><span class="line"><span class="meta">#<span class="meta-keyword">include</span> <span class="meta-string">&lt;android/log.h&gt;</span></span></span><br><span class="line"><span class="meta">#<span class="meta-keyword">include</span> <span class="meta-string">"main.h"</span></span></span><br><span class="line"><span class="meta">#<span class="meta-keyword">include</span> <span class="meta-string">&lt;android/log.h&gt;</span></span></span><br><span class="line"></span><br><span class="line"><span class="keyword">static</span> <span class="keyword">const</span> <span class="keyword">char</span> *TAG = <span class="string">"NDK"</span>;</span><br><span class="line"></span><br><span class="line"><span class="keyword">extern</span> <span class="string">"C"</span> &#123;</span><br><span class="line"></span><br><span class="line"><span class="function">jstring <span class="title">Java_io_l0neman_mkexample_NativeHandler_getHello</span><span class="params">(JNIEnv *env, jclass clazz)</span> </span>&#123;</span><br><span class="line">  __android_log_print(ANDROID_LOG_DEBUG, TAG, <span class="string">"log test."</span>);</span><br><span class="line">  <span class="keyword">return</span> env-&gt;NewStringUTF(<span class="string">"Hello-jni"</span>);</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line">&#125;;</span><br></pre></td></tr></table></figure>
+
+
+
+<h2 id="CMake-1"><a href="#CMake-1" class="headerlink" title="CMake"></a>CMake</h2><p>CMake 描述如下，首先使用 <code>find_library</code> 描述 NDK 库，再用 <code>target_link_libraries</code> 指定链接库：</p>
+<figure class="highlight cmake"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># CMakeLists.txt</span></span><br><span class="line"></span><br><span class="line"><span class="keyword">cmake_minimum_required</span>(VERSION <span class="number">3.4</span>.<span class="number">3</span>)</span><br><span class="line"></span><br><span class="line"><span class="keyword">add_library</span>(</span><br><span class="line">        foo</span><br><span class="line">        SHARED</span><br><span class="line">        main.cpp</span><br><span class="line">)</span><br><span class="line"></span><br><span class="line"><span class="keyword">find_library</span>(</span><br><span class="line">        <span class="comment"># 使用变量描述系统库</span></span><br><span class="line">        log-lib</span><br><span class="line">        <span class="comment"># 系统库名字</span></span><br><span class="line">        log</span><br><span class="line">)</span><br><span class="line"></span><br><span class="line"><span class="comment"># 指定将前面描述的 log-lib 库链接到目标 foo 中</span></span><br><span class="line"><span class="keyword">target_link_libraries</span>(</span><br><span class="line">        foo</span><br><span class="line">        <span class="variable">$&#123;log-lib&#125;</span></span><br><span class="line">)</span><br></pre></td></tr></table></figure>
+
+<p>如果需要添加多个库，新增 <code>find_library</code> 块，添加另一个库的描述后，在 <code>target_link_libraries</code> 加入即可：</p>
+<figure class="highlight cmake"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># CMakeLists.txt</span></span><br><span class="line"></span><br><span class="line">...</span><br><span class="line"></span><br><span class="line"><span class="keyword">find_library</span>(</span><br><span class="line">        zip-lib</span><br><span class="line">        z</span><br><span class="line">)</span><br><span class="line"></span><br><span class="line"><span class="keyword">target_link_libraries</span>(</span><br><span class="line">        foo</span><br><span class="line">        <span class="variable">$&#123;log-lib&#125;</span></span><br><span class="line">        <span class="variable">$&#123;zip-lib&#125;</span></span><br><span class="line">)</span><br></pre></td></tr></table></figure>
+
+
+
+<h1 id="引入预编译库"><a href="#引入预编译库" class="headerlink" title="引入预编译库"></a>引入预编译库</h1><p>有时需要引入提前编译好或者第三方提供的 so 共享库，或是引入现成的 .a 静态库，那么根据情况进行如下配置。</p>
+<h2 id="引入动态库"><a href="#引入动态库" class="headerlink" title="引入动态库"></a>引入动态库</h2><ol>
+<li>首先在独立的 NDK 工程编译出一个共享库 libbar.so（创建 libbar Module），作为第三方库提供给其他 Module 使用。</li>
+</ol>
+<p>工程目录结构：</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line">jni</span><br><span class="line"> |</span><br><span class="line"> +-- Android.mk</span><br><span class="line"> +-- Application.mk</span><br><span class="line"> +-- libbar.h</span><br><span class="line"> +-- libbar.cpp</span><br></pre></td></tr></table></figure>
+
+<p>测试代码：</p>
+<figure class="highlight cpp"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">// libbar.h</span></span><br><span class="line"><span class="meta">#<span class="meta-keyword">ifndef</span> NDKTPROJECT_LIBBAR_H</span></span><br><span class="line"><span class="meta">#<span class="meta-keyword">define</span> NDKTPROJECT_LIBBAR_H</span></span><br><span class="line"></span><br><span class="line"><span class="keyword">extern</span> <span class="string">"C"</span> &#123;</span><br><span class="line"></span><br><span class="line"><span class="function"><span class="keyword">int</span> <span class="title">bar_add</span><span class="params">(<span class="keyword">int</span> a, <span class="keyword">int</span> b)</span></span>;</span><br><span class="line"></span><br><span class="line">&#125;;</span><br><span class="line"></span><br><span class="line"><span class="meta">#<span class="meta-keyword">endif</span> <span class="comment">//NDKTPROJECT_LIBBAR_H</span></span></span><br></pre></td></tr></table></figure>
+
+
+
+<figure class="highlight cpp"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">// libbar.cpp</span></span><br><span class="line"><span class="meta">#<span class="meta-keyword">include</span> <span class="meta-string">"libbar.h"</span></span></span><br><span class="line"></span><br><span class="line"><span class="function"><span class="keyword">int</span> <span class="title">bar_add</span><span class="params">(<span class="keyword">int</span> a, <span class="keyword">int</span> b)</span> </span>&#123;</span><br><span class="line">  <span class="keyword">return</span> a + b;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+
+
+<figure class="highlight makefile"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># libbar/src/main/jni/Android.mk</span></span><br><span class="line"></span><br><span class="line">LOCAL_PATH := <span class="variable">$(<span class="built_in">call</span> my-<span class="built_in">dir</span>)</span></span><br><span class="line"></span><br><span class="line"><span class="keyword">include</span> <span class="variable">$(CLEAR_VARS)</span></span><br><span class="line"></span><br><span class="line">LOCAL_MODULE := bar</span><br><span class="line">LOCAL_SRC_FILES := libbar.cpp</span><br><span class="line"></span><br><span class="line"><span class="keyword">include</span> <span class="variable">$(BUILD_SHARED_LIBRARY)</span></span><br></pre></td></tr></table></figure>
+
+
+
+<figure class="highlight makefile"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># libbar/src/main/jni/Application.mk</span></span><br><span class="line"></span><br><span class="line">APP_ABI := armeabi-v7a arm64-v8a x86 x86_64</span><br><span class="line">APP_OPTIM := debug</span><br></pre></td></tr></table></figure>
+
+<p>使用命令行进入 jni 目录下，然后执行 ndk-build 编译出 4 种架构的 libbar.so 文件，在和 jni 同级的 libs 目录下。</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br></pre></td><td class="code"><pre><span class="line">jni</span><br><span class="line">libs</span><br><span class="line"> |</span><br><span class="line"> +-- armeabi-v7a</span><br><span class="line"> |    +-- libbar.so</span><br><span class="line"> |</span><br><span class="line"> +-- arm64-v8a</span><br><span class="line"> |    +-- libbar.so</span><br><span class="line"> |</span><br><span class="line"> +-- x86</span><br><span class="line"> |    +-- libbar.so</span><br><span class="line"> |</span><br><span class="line"> +-- x86_64</span><br><span class="line">      +-- libbar.so</span><br></pre></td></tr></table></figure>
+
+
+
+<ol start="2">
+<li>将每种架构目录复制到需要使用此库的 NDK 工程中（libfoo.so Module），在工程中新建 include 目录，将 libbar 的头文件复制过来，为了提供调用的接口。</li>
+</ol>
+<p>工程目录结构：</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br></pre></td><td class="code"><pre><span class="line">jni</span><br><span class="line"> |</span><br><span class="line"> +-- armeabi-v7a</span><br><span class="line"> |    +-- libbar.so</span><br><span class="line"> |</span><br><span class="line"> +-- arm64-v8a</span><br><span class="line"> |    +-- libbar.so</span><br><span class="line"> |</span><br><span class="line"> +-- x86</span><br><span class="line"> |    +-- libbar.so</span><br><span class="line"> |</span><br><span class="line"> +-- x86_64</span><br><span class="line"> |    +-- libbar.so</span><br><span class="line"> |</span><br><span class="line"> +-- include</span><br><span class="line"> |    +-- libbar.h</span><br><span class="line"> |</span><br><span class="line"> +-- Android.mk</span><br><span class="line"> +-- Application.mk</span><br><span class="line"> +-- libfoo.h</span><br><span class="line"> +-- libfoo.cpp</span><br></pre></td></tr></table></figure>
+
+
+
+<ol start="3">
+<li>编写 libfoo.so Module 的 Android.mk 文件，<code>$(TARGET_ARCH_ABI)</code> 为 NDK 编译时每种架构的名字。</li>
+</ol>
+<figure class="highlight makefile"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br></pre></td><td class="code"><pre><span class="line">LOCAL_PATH := <span class="variable">$(<span class="built_in">call</span> my-<span class="built_in">dir</span>)</span></span><br><span class="line"></span><br><span class="line"><span class="keyword">include</span> <span class="variable">$(CLEAR_VARS)</span></span><br><span class="line"><span class="comment"># 描述预编译库动态库的名称</span></span><br><span class="line">LOCAL_MODULE := libbar-pre</span><br><span class="line"><span class="comment"># 描述预编译动态库路径</span></span><br><span class="line">LOCAL_SRC_FILES := <span class="variable">$(TARGET_ARCH_ABI)</span>/libbar.so</span><br><span class="line"><span class="comment"># 描述预编译动态库引入的头文件</span></span><br><span class="line">LOCAL_EXPORT_C_INCLUDES := <span class="variable">$(LOCAL_PATH)</span>/<span class="keyword">include</span></span><br><span class="line"><span class="keyword">include</span> <span class="variable">$(PREBUILT_SHARED_LIBRARY)</span></span><br><span class="line"></span><br><span class="line"><span class="keyword">include</span> <span class="variable">$(CLEAR_VARS)</span></span><br><span class="line">LOCAL_MODULE := foo</span><br><span class="line">LOCAL_SRC_FILES := main.cpp</span><br><span class="line"><span class="comment"># 描述要使用的共享库名称</span></span><br><span class="line">LOCAL_SHARED_LIBRARIES := libbar-pre</span><br><span class="line"><span class="keyword">include</span> <span class="variable">$(BUILD_SHARED_LIBRARY)</span></span><br></pre></td></tr></table></figure>
+
+<p>此时当工程编译时，对应的 libbar.so 将会自动被加入到 apk 包中。</p>
+<ol start="4">
+<li>代码调用</li>
+</ol>
+<figure class="highlight cpp"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">// libfoo.h</span></span><br><span class="line"></span><br><span class="line"><span class="meta">#<span class="meta-keyword">ifndef</span> NDKTPROJECT_LIBFOO_H</span></span><br><span class="line"><span class="meta">#<span class="meta-keyword">define</span> NDKTPROJECT_LIBFOO_H</span></span><br><span class="line"></span><br><span class="line"><span class="meta">#<span class="meta-keyword">include</span> <span class="meta-string">&lt;jni.h&gt;</span></span></span><br><span class="line"></span><br><span class="line"><span class="keyword">extern</span> <span class="string">"C"</span> &#123;</span><br><span class="line"></span><br><span class="line">JNIEXPORT <span class="keyword">void</span> JNICALL</span><br><span class="line">Java_io_l0neman_mkexample_NativeHandler_test(JNIEnv *env, jclass clazz);</span><br><span class="line"></span><br><span class="line">&#125;;</span><br><span class="line"></span><br><span class="line"><span class="meta">#<span class="meta-keyword">endif</span> <span class="comment">//NDKTPROJECT_LIBFOO_H</span></span></span><br></pre></td></tr></table></figure>
+
+
+
+<figure class="highlight cpp"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">// libfoo.cpp</span></span><br><span class="line"></span><br><span class="line"><span class="meta">#<span class="meta-keyword">include</span> <span class="meta-string">"libbar.h"</span></span></span><br><span class="line"><span class="meta">#<span class="meta-keyword">include</span> <span class="meta-string">"libfoo.h"</span></span></span><br><span class="line"></span><br><span class="line"><span class="function"><span class="keyword">void</span> <span class="title">Java_io_l0neman_mkexample_NativeHandler_test</span><span class="params">(JNIEnv *env, jclass clazz)</span> </span>&#123;</span><br><span class="line">  <span class="keyword">int</span> a = bar_add(<span class="number">1</span>, <span class="number">4</span>);</span><br><span class="line">  <span class="built_in">printf</span>(<span class="string">"%d\n"</span>, a);</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+
+
+<ol start="5">
+<li>Java 层调用测试</li>
+</ol>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">// class io.l0neman.mkexample.NativeHandler</span></span><br><span class="line"></span><br><span class="line"><span class="keyword">public</span> <span class="class"><span class="keyword">class</span> <span class="title">NativeHandler</span> </span>&#123;</span><br><span class="line"></span><br><span class="line">  <span class="keyword">static</span> &#123;</span><br><span class="line">    <span class="comment">// 加载 libfoo.so 时，libbar 会被自动加载。</span></span><br><span class="line">    System.loadLibrary(<span class="string">"foo"</span>);</span><br><span class="line">  &#125;</span><br><span class="line"></span><br><span class="line">  <span class="function"><span class="keyword">public</span> <span class="keyword">static</span> <span class="keyword">native</span> <span class="keyword">void</span> <span class="title">test</span><span class="params">()</span></span>;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+
+
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">// MainActivity.java</span></span><br><span class="line">NativeHandler.test();</span><br></pre></td></tr></table></figure>
+
+
+
+<h2 id="引入静态库"><a href="#引入静态库" class="headerlink" title="引入静态库"></a>引入静态库</h2><ol>
+<li>首先编译出 .a 后缀的静态库 libbar.a。</li>
+</ol>
+<p>工程结构和上面引入动态库中的 libbar 工程一致，只需要将 Android.mk 文件中引入的 <code>BUILD_SHARED_LIBRARY</code> 变量修改为 <code>BUILD_STATIC_LIBRARY</code> 即可指定编译出静态库。</p>
+<figure class="highlight makefile"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># libbar/src/main/Android.mk</span></span><br><span class="line"></span><br><span class="line">LOCAL_PATH := <span class="variable">$(<span class="built_in">call</span> my-<span class="built_in">dir</span>)</span></span><br><span class="line"></span><br><span class="line"><span class="keyword">include</span> <span class="variable">$(CLEAR_VARS)</span></span><br><span class="line"></span><br><span class="line">LOCAL_MODULE := bar</span><br><span class="line">LOCAL_SRC_FILES := libbar.cpp</span><br><span class="line"></span><br><span class="line"><span class="comment"># 指定编译出静态库</span></span><br><span class="line"><span class="keyword">include</span> <span class="variable">$(BUILD_STATIC_LIBRARY)</span></span><br></pre></td></tr></table></figure>
+
+<p>使用 ndk-build 编译后，不会产生和 jni 同级的 libs 目录，每种架构的 libbar.a 文件将出现在和 jni 同级的 obj 目录中。</p>
+<p>目录结构如下：</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br></pre></td><td class="code"><pre><span class="line">jni</span><br><span class="line">obj</span><br><span class="line"> |</span><br><span class="line"> +-- armeabi-v7a</span><br><span class="line"> |    +-- libbar.a</span><br><span class="line"> |</span><br><span class="line"> +-- arm64-v8a</span><br><span class="line"> |    +-- libbar.a</span><br><span class="line"> |</span><br><span class="line"> +-- x86</span><br><span class="line"> |    +-- libbar.a</span><br><span class="line"> |</span><br><span class="line"> +-- x86_64</span><br><span class="line">      +-- libbar.a</span><br></pre></td></tr></table></figure>
+
+
+
+<ol start="2">
+<li>在 libfoo.so 工程中引入静态库，步骤和引入动态库大同小异，把 obj 中每种架构的目录复制到需要使用此库的 NDK 工程中（libfoo.so），在工程中新建 include 目录，将 libbar 的头文件复制过来，为了提供调用的接口。</li>
+</ol>
+<p>工程目录结构：</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br></pre></td><td class="code"><pre><span class="line">jni</span><br><span class="line"> |</span><br><span class="line"> +-- armeabi-v7a</span><br><span class="line"> |    +-- libbar.a</span><br><span class="line"> |</span><br><span class="line"> +-- arm64-v8a</span><br><span class="line"> |    +-- libbar.a</span><br><span class="line"> |</span><br><span class="line"> +-- x86</span><br><span class="line"> |    +-- libbar.a</span><br><span class="line"> |</span><br><span class="line"> +-- x86_64</span><br><span class="line"> |    +-- libbar.a</span><br><span class="line"> |</span><br><span class="line"> +-- include</span><br><span class="line"> |   +-- libbar.h</span><br><span class="line"> |</span><br><span class="line"> +-- Android.mk</span><br><span class="line"> +-- Application.mk</span><br><span class="line"> +-- libfoo.h</span><br><span class="line"> +-- libfoo.cpp</span><br></pre></td></tr></table></figure>
+
+
+
+<ol start="3">
+<li>编写 libfoo.so 的 Android.mk 文件，<code>$(TARGET_ARCH_ABI)</code> 为 NDK 编译时每种架构的名字。</li>
+</ol>
+<figure class="highlight makefile"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br></pre></td><td class="code"><pre><span class="line">LOCAL_PATH := <span class="variable">$(<span class="built_in">call</span> my-<span class="built_in">dir</span>)</span></span><br><span class="line"></span><br><span class="line"><span class="keyword">include</span> <span class="variable">$(CLEAR_VARS)</span></span><br><span class="line"><span class="comment"># 描述预编译静态库的名字</span></span><br><span class="line">LOCAL_MODULE := libbar-pre</span><br><span class="line"><span class="comment"># 描述预编译静态库的位置</span></span><br><span class="line">LOCAL_SRC_FILES := <span class="variable">$(TARGET_ARCH_ABI)</span>/libbar.a</span><br><span class="line"><span class="comment"># 描述预编译静态库引入的头文件</span></span><br><span class="line">LOCAL_EXPORT_C_INCLUDES := <span class="variable">$(LOCAL_PATH)</span>/<span class="keyword">include</span></span><br><span class="line"><span class="keyword">include</span> <span class="variable">$(PREBUILT_STATIC_LIBRARY)</span></span><br><span class="line"></span><br><span class="line"><span class="keyword">include</span> <span class="variable">$(CLEAR_VARS)</span></span><br><span class="line">LOCAL_MODULE := foo</span><br><span class="line">LOCAL_SRC_FILES := main.cpp</span><br><span class="line"><span class="comment"># 描述要使用的静态库名称</span></span><br><span class="line">LOCAL_STATIC_LIBRARIES := libbar-pre</span><br><span class="line"><span class="keyword">include</span> <span class="variable">$(BUILD_SHARED_LIBRARY)</span></span><br></pre></td></tr></table></figure>
+
+<p>此时当工程编译时，对应的 libbar.a 将会自动编译到 libfoo.so 中，成为它的一部分。</p>
+<ol start="4">
+<li>最后引用头文件正常调用编译即可，参考引用动态库中的步骤 4。</li>
+</ol>
+<h2 id="CMake-2"><a href="#CMake-2" class="headerlink" title="CMake"></a>CMake</h2><p>上面的两个示例均为 Android.mk 构建示例，使用 CMake 构建简要描述如下：</p>
+<ul>
+<li>引入动态库</li>
+</ul>
+<p>首先将前面 libbar.so 复制到 CMake 项目的 jniLibs 中，项目结构如下：</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br></pre></td><td class="code"><pre><span class="line">main</span><br><span class="line"> |</span><br><span class="line"> +-- cpp</span><br><span class="line"> |    |</span><br><span class="line"> |    +-- include</span><br><span class="line"> |    |    |</span><br><span class="line"> |    |    +-- libbar.h</span><br><span class="line"> |    |</span><br><span class="line"> |    +-- libfoo.cpp</span><br><span class="line"> |    +-- libfoo.h</span><br><span class="line"> |    +-- CMakeLists.txt</span><br><span class="line"> |</span><br><span class="line"> +-- jniLibs</span><br><span class="line">      |</span><br><span class="line">      +-- armeabi-v7a</span><br><span class="line">      |    +-- libbar.so</span><br><span class="line">      |</span><br><span class="line">      +-- arm64-v8a</span><br><span class="line">      |    +-- libbar.so</span><br><span class="line">      |</span><br><span class="line">      +-- x86</span><br><span class="line">      |    +-- libbar.so</span><br><span class="line">      |</span><br><span class="line">      +-- x86_64</span><br><span class="line">           +-- libbar.so</span><br></pre></td></tr></table></figure>
+
+<p>将预编译库放在 jniLibs 下面是为了在编译时打包到 apk 中。</p>
+<p>其中 libfoo.cpp 和 libfoo.h 与上述 Android.mk 中源码一致，重点关注 CMakeLists.txt：</p>
+<figure class="highlight cmake"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">cmake_minimum_required</span>(VERSION <span class="number">3.4</span>.<span class="number">3</span>)</span><br><span class="line"><span class="comment"># 设置当前路径变量</span></span><br><span class="line"><span class="keyword">set</span>(CURRENT_DIR <span class="variable">$&#123;CMAKE_SOURCE_DIR&#125;</span>)</span><br><span class="line"></span><br><span class="line"><span class="keyword">add_library</span>(</span><br><span class="line">        foo</span><br><span class="line">        SHARED</span><br><span class="line">        main.cpp</span><br><span class="line">)</span><br><span class="line"><span class="comment"># 描述预编译动态库 bar-lib</span></span><br><span class="line"><span class="keyword">add_library</span>(</span><br><span class="line">        bar-lib</span><br><span class="line">        SHARED</span><br><span class="line">        IMPORTED</span><br><span class="line">)</span><br><span class="line"><span class="comment"># 设置预编译库 bar-lib 位置属性</span></span><br><span class="line"><span class="keyword">set_target_properties</span>(</span><br><span class="line">        bar-lib</span><br><span class="line">        PROPERTIES IMPORTED_LOCATION</span><br><span class="line">        <span class="variable">$&#123;CMAKE_SOURCE_DIR&#125;</span>/../jniLibs/<span class="variable">$&#123;ANDROID_ABI&#125;</span>/libbar.so</span><br><span class="line">)</span><br><span class="line"><span class="comment"># 为上面预编译库指定头文件路径</span></span><br><span class="line"><span class="keyword">include_directories</span>(<span class="keyword">include</span>/)</span><br><span class="line"></span><br><span class="line"><span class="keyword">target_link_libraries</span>(</span><br><span class="line">        foo</span><br><span class="line">        bar-lib</span><br><span class="line">)</span><br></pre></td></tr></table></figure>
+
+<p>编译测试即可。</p>
+<ul>
+<li>引入静态库</li>
+</ul>
+<p>将前面 libbar.a 复制到 CMake 项目的 cpp 中，项目结构如下：</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br></pre></td><td class="code"><pre><span class="line">cpp</span><br><span class="line"> |</span><br><span class="line"> +-- include</span><br><span class="line"> |    |</span><br><span class="line"> |    +-- libbar.h</span><br><span class="line"> |</span><br><span class="line"> +-- libfoo.cpp</span><br><span class="line"> +-- libfoo.h</span><br><span class="line"> +-- CMakeLists.txt</span><br><span class="line"> |</span><br><span class="line"> +-- armeabi-v7a</span><br><span class="line"> |    +-- libbar.a</span><br><span class="line"> |</span><br><span class="line"> +-- arm64-v8a</span><br><span class="line"> |    +-- libbar.a</span><br><span class="line"> |</span><br><span class="line"> +-- x86</span><br><span class="line"> |    +-- libbar.a</span><br><span class="line"> |</span><br><span class="line"> +-- x86_64</span><br><span class="line">      +-- libbar.a</span><br></pre></td></tr></table></figure>
+
+<p>由于静态库 .a 直接编译到目标文件 libfoo 中，所以不用放在 jniLibs 打包至 apk 中。</p>
+<p>CMakeLists.txt：</p>
+<figure class="highlight cmake"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">cmake_minimum_required</span>(VERSION <span class="number">3.4</span>.<span class="number">3</span>)</span><br><span class="line"><span class="comment"># 设置当前路径变量</span></span><br><span class="line"><span class="keyword">set</span>(CURRENT_DIR <span class="variable">$&#123;CMAKE_SOURCE_DIR&#125;</span>)</span><br><span class="line"></span><br><span class="line"><span class="keyword">add_library</span>(</span><br><span class="line">        foo</span><br><span class="line">        SHARED</span><br><span class="line">        main.cpp</span><br><span class="line">)</span><br><span class="line"><span class="comment"># 描述预编译库静态库 bar-lib</span></span><br><span class="line"><span class="keyword">add_library</span>(</span><br><span class="line">        bar-lib</span><br><span class="line">        STATIC</span><br><span class="line">        IMPORTED</span><br><span class="line">)</span><br><span class="line"><span class="comment"># 设置预编译库 bar-lib 位置属性</span></span><br><span class="line"><span class="keyword">set_target_properties</span>(</span><br><span class="line">        bar-lib</span><br><span class="line">        PROPERTIES IMPORTED_LOCATION</span><br><span class="line">        <span class="variable">$&#123;CMAKE_SOURCE_DIR&#125;</span>/<span class="variable">$&#123;ANDROID_ABI&#125;</span>/libbar.a</span><br><span class="line">)</span><br><span class="line"><span class="comment"># 为上面预编译库指定头文件路径</span></span><br><span class="line"><span class="keyword">include_directories</span>(<span class="keyword">include</span>/)</span><br><span class="line"></span><br><span class="line"><span class="keyword">target_link_libraries</span>(</span><br><span class="line">        foo</span><br><span class="line">        bar-lib</span><br><span class="line">)</span><br></pre></td></tr></table></figure>
+
+<p>编译测试即可。</p>
+<h1 id="参考"><a href="#参考" class="headerlink" title="参考"></a>参考</h1><p><a href="https://developer.android.google.cn/ndk/guides/build">https://developer.android.google.cn/ndk/guides/build</a></p>
+</div><div class="article-tags size-small mb-4"><span class="mr-2">#</span><a class="link-muted mr-2" rel="tag" href="/tags/android/">Android</a><a class="link-muted mr-2" rel="tag" href="/tags/ndk/">NDK</a><a class="link-muted mr-2" rel="tag" href="/tags/jni/">JNI</a></div><div class="addthis_inline_share_toolbox"></div><script src="//s7.addthis.com/js/300/addthis_widget.js#pubid=ra-5f0f12c19a2af379" defer></script></article></div><div class="card"><div class="card-content"><h3 class="menu-label has-text-centered">喜欢这篇文章？打赏一下作者吧</h3><div class="buttons is-centered"><a class="button is-info donate"><span class="icon is-small"><i class="fab fa-alipay"></i></span><span>支付宝</span><span class="qrcode"><img src="/img/qrcode/alipay.jpg" alt="支付宝"></span></a><a class="button is-success donate"><span class="icon is-small"><i class="fab fa-weixin"></i></span><span>微信</span><span class="qrcode"><img src="/img/qrcode/wxpay.jpg" alt="微信"></span></a></div></div></div><nav class="post-navigation mt-4 level is-mobile"><div class="level-start"><a class="article-nav-prev level level-item link-muted" href="/2020/07/14/android-jni-%E6%8C%87%E5%8D%97/"><i class="level-item fas fa-chevron-left"></i><span class="level-item">Android JNI 指南</span></a></div><div class="level-end"><a class="article-nav-next level level-item link-muted" href="/2020/07/14/makefile-%E6%8C%87%E5%8D%97/"><span class="level-item">Makefile 指南</span><i class="level-item fas fa-chevron-right"></i></a></div></nav><div class="card"><div class="card-content"><h3 class="title is-5">评论</h3><script src="https://utteranc.es/client.js" repo="l0neman/l0neman.github.io" issue-term="pathname" label="comment" theme="github-light" crossorigin="anonymous" async></script></div></div></div><!--!--><div class="column column-right  order-3 is-sticky"><div class="card widget" id="toc"><div class="card-content"><div class="menu" style="max-height: 480px; overflow: auto;"><h3 class="menu-label">目录</h3><ul class="menu-list"><li><a class="is-flex" href="#前言"><span class="mr-2">1</span><span>前言</span></a></li><li><a class="is-flex" href="#NDK-工程构建"><span class="mr-2">2</span><span>NDK 工程构建</span></a><ul class="menu-list"><li><a class="is-flex" href="#Android-mk"><span class="mr-2">2.1</span><span>Android.mk</span></a></li><li><a class="is-flex" href="#CMake"><span class="mr-2">2.2</span><span>CMake</span></a></li><li><a class="is-flex" href="#独立工具链"><span class="mr-2">2.3</span><span>独立工具链</span></a><ul class="menu-list"><li><a class="is-flex" href="#obfuscator-llvm-构建"><span class="mr-2">2.3.1</span><span>obfuscator-llvm 构建</span></a></li></ul></li><li><a class="is-flex" href="#构建技巧"><span class="mr-2">2.4</span><span>构建技巧</span></a><ul class="menu-list"><li><a class="is-flex" href="#独立构建"><span class="mr-2">2.4.1</span><span>独立构建</span></a></li><li><a class="is-flex" href="#快速部署"><span class="mr-2">2.4.2</span><span>快速部署</span></a></li></ul></li></ul></li><li><a class="is-flex" href="#Android-mk-变量参考"><span class="mr-2">3</span><span>Android.mk 变量参考</span></a><ul class="menu-list"><li><a class="is-flex" href="#变量命名规范"><span class="mr-2">3.1</span><span>变量命名规范</span></a></li><li><a class="is-flex" href="#NDK-定义的-include-变量"><span class="mr-2">3.2</span><span>NDK 定义的 include 变量</span></a></li><li><a class="is-flex" href="#目标信息变量"><span class="mr-2">3.3</span><span>目标信息变量</span></a></li><li><a class="is-flex" href="#模块描述变量"><span class="mr-2">3.4</span><span>模块描述变量</span></a></li><li><a class="is-flex" href="#NDK-提供的函数宏"><span class="mr-2">3.5</span><span>NDK 提供的函数宏</span></a></li></ul></li><li><a class="is-flex" href="#Application-mk-变量参考"><span class="mr-2">4</span><span>Application.mk 变量参考</span></a></li><li><a class="is-flex" href="#NDK-API"><span class="mr-2">5</span><span>NDK API</span></a><ul class="menu-list"><li><a class="is-flex" href="#Android-mk-1"><span class="mr-2">5.1</span><span>Android.mk</span></a></li><li><a class="is-flex" href="#CMake-1"><span class="mr-2">5.2</span><span>CMake</span></a></li></ul></li><li><a class="is-flex" href="#引入预编译库"><span class="mr-2">6</span><span>引入预编译库</span></a><ul class="menu-list"><li><a class="is-flex" href="#引入动态库"><span class="mr-2">6.1</span><span>引入动态库</span></a></li><li><a class="is-flex" href="#引入静态库"><span class="mr-2">6.2</span><span>引入静态库</span></a></li><li><a class="is-flex" href="#CMake-2"><span class="mr-2">6.3</span><span>CMake</span></a></li></ul></li><li><a class="is-flex" href="#参考"><span class="mr-2">7</span><span>参考</span></a></li></ul></div></div></div><div class="card widget"><div class="card-content"><div class="menu"><h3 class="menu-label">分类</h3><ul class="menu-list"><li><a class="level is-mobile is-marginless" href="/categories/android-%E5%BA%94%E7%94%A8%E5%BC%80%E5%8F%91/"><span class="level-start"><span class="level-item">Android 应用开发</span></span><span class="level-end"><span class="level-item tag">3</span></span></a></li><li><a class="level is-mobile is-marginless" href="/categories/android-%E7%B3%BB%E7%BB%9F%E5%8E%9F%E7%90%86/"><span class="level-start"><span class="level-item">Android 系统原理</span></span><span class="level-end"><span class="level-item tag">1</span></span></a></li></ul></div></div></div><div class="card widget"><div class="card-content"><h3 class="menu-label">最新文章</h3><article class="media"><div class="media-content size-small"><p><time dateTime="2020-07-14T15:32:18.000Z">2020-07-14</time></p><p class="title is-6"><a class="link-muted" href="/2020/07/14/android-binder-%E8%AE%BE%E8%AE%A1%E5%88%86%E6%9E%90/">Android Binder 设计分析</a></p><p class="is-uppercase"><a class="link-muted" href="/categories/android-%E7%B3%BB%E7%BB%9F%E5%8E%9F%E7%90%86/">Android 系统原理</a></p></div></article><article class="media"><div class="media-content size-small"><p><time dateTime="2020-07-14T15:27:23.000Z">2020-07-14</time></p><p class="title is-6"><a class="link-muted" href="/2020/07/14/android-jni-%E6%8C%87%E5%8D%97/">Android JNI 指南</a></p><p class="is-uppercase"><a class="link-muted" href="/categories/android-%E5%BA%94%E7%94%A8%E5%BC%80%E5%8F%91/">Android 应用开发</a></p></div></article><article class="media"><div class="media-content size-small"><p><time dateTime="2020-07-14T15:20:17.000Z">2020-07-14</time></p><p class="title is-6"><a class="link-muted" href="/2020/07/14/android-ndk-%E6%8C%87%E5%8D%97/">Android NDK 指南</a></p><p class="is-uppercase"><a class="link-muted" href="/categories/android-%E5%BA%94%E7%94%A8%E5%BC%80%E5%8F%91/">Android 应用开发</a></p></div></article><article class="media"><div class="media-content size-small"><p><time dateTime="2020-07-14T15:06:51.000Z">2020-07-14</time></p><p class="title is-6"><a class="link-muted" href="/2020/07/14/makefile-%E6%8C%87%E5%8D%97/">Makefile 指南</a></p><p class="is-uppercase"><a class="link-muted" href="/categories/android-%E5%BA%94%E7%94%A8%E5%BC%80%E5%8F%91/">Android 应用开发</a></p></div></article></div></div><div class="card widget"><div class="card-content"><div class="menu"><h3 class="menu-label">归档</h3><ul class="menu-list"><li><a class="level is-mobile is-marginless" href="/archives/2020/07/"><span class="level-start"><span class="level-item">七月 2020</span></span><span class="level-end"><span class="level-item tag">4</span></span></a></li></ul></div></div></div><div class="card widget"><div class="card-content"><div class="menu"><h3 class="menu-label">标签</h3><div class="field is-grouped is-grouped-multiline"><div class="control"><a class="tags has-addons" href="/tags/android/"><span class="tag">Android</span><span class="tag is-grey-lightest">3</span></a></div><div class="control"><a class="tags has-addons" href="/tags/binder/"><span class="tag">Binder</span><span class="tag is-grey-lightest">1</span></a></div><div class="control"><a class="tags has-addons" href="/tags/jni/"><span class="tag">JNI</span><span class="tag is-grey-lightest">2</span></a></div><div class="control"><a class="tags has-addons" href="/tags/make/"><span class="tag">Make</span><span class="tag is-grey-lightest">1</span></a></div><div class="control"><a class="tags has-addons" href="/tags/makefile/"><span class="tag">Makefile</span><span class="tag is-grey-lightest">1</span></a></div><div class="control"><a class="tags has-addons" href="/tags/ndk/"><span class="tag">NDK</span><span class="tag is-grey-lightest">3</span></a></div></div></div></div></div></div></div></div></section><footer class="footer"><div class="container"><div class="level"><div class="level-start"><a class="footer-logo is-block mb-2" href="/"><img src="/img/logo.png" alt="l0neman 的博客" height="28"></a><p class="size-small"><span>&copy; 2020 l0neman</span>  Powered by <a href="https://hexo.io/" target="_blank" rel="noopener">Hexo</a> &amp; <a href="https://github.com/ppoffice/hexo-theme-icarus" target="_blank" rel="noopener">Icarus</a><br><span id="busuanzi_container_site_uv">共<span id="busuanzi_value_site_uv">0</span>个访客</span></p></div><div class="level-end"><div class="field has-addons"><p class="control"><a class="button is-transparent is-large" target="_blank" rel="noopener" title="Creative Commons" href="https://creativecommons.org/"><i class="fab fa-creative-commons"></i></a></p><p class="control"><a class="button is-transparent is-large" target="_blank" rel="noopener" title="Attribution 4.0 International" href="https://creativecommons.org/licenses/by/4.0/"><i class="fab fa-creative-commons-by"></i></a></p><p class="control"><a class="button is-transparent is-large" target="_blank" rel="noopener" title="Download on GitHub" href="https://github.com/l0neman"><i class="fab fa-github"></i></a></p></div></div></div></div></footer><script src="https://cdn.jsdelivr.net/npm/jquery@3.3.1/dist/jquery.min.js"></script><script src="https://cdn.jsdelivr.net/npm/moment@2.22.2/min/moment-with-locales.min.js"></script><script>moment.locale("zh-CN");</script><script>var IcarusThemeSettings = {
+            site: {
+                url: 'https://l0neman.github.io',
+                external_link: {"enable":true,"exclude":[]}
+            },
+            article: {
+                highlight: {
+                    clipboard: true,
+                    fold: 'unfolded'
+                }
+            }
+        };</script><script src="https://cdn.jsdelivr.net/npm/clipboard@2.0.4/dist/clipboard.min.js" defer></script><script src="/js/animation.js"></script><a id="back-to-top" title="回到顶端" href="javascript:;"><i class="fas fa-chevron-up"></i></a><script src="/js/back_to_top.js" defer></script><!--!--><!--!--><!--!--><script src="https://cdn.jsdelivr.net/npm/lightgallery@1.6.8/dist/js/lightgallery.min.js" defer></script><script src="https://cdn.jsdelivr.net/npm/justifiedGallery@3.7.0/dist/js/jquery.justifiedGallery.min.js" defer></script><script>window.addEventListener("load", () => {
+            if (typeof $.fn.lightGallery === 'function') {
+                $('.article').lightGallery({ selector: '.gallery-item' });
+            }
+            if (typeof $.fn.justifiedGallery === 'function') {
+                if ($('.justified-gallery > p > .gallery-item').length) {
+                    $('.justified-gallery > p > .gallery-item').unwrap();
+                }
+                $('.justified-gallery').justifiedGallery();
+            }
+        });</script><!--!--><!--!--><!--!--><script src="/js/main.js" defer></script><div class="searchbox"><div class="searchbox-container"><div class="searchbox-header"><div class="searchbox-input-container"><input class="searchbox-input" type="text" placeholder="想要查找什么..."></div><a class="searchbox-close" href="javascript:;">×</a></div><div class="searchbox-body"></div></div></div><script src="/js/insight.js" defer></script><script>document.addEventListener('DOMContentLoaded', function () {
+            loadInsight({"contentUrl":"/content.json"}, {"hint":"想要查找什么...","untitled":"(无标题)","posts":"文章","pages":"页面","categories":"分类","tags":"标签"});
+        });</script></body></html>

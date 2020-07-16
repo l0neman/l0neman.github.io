@@ -1,0 +1,559 @@
+<!doctype html>
+<html lang="zh"><head><meta charset="utf-8"><meta name="generator" content="Hexo 4.2.1"><meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1"><meta><title>Android Binder 设计分析 - l0neman 的博客</title><meta description="前言以下 Binder 设计部分整理至 universus 的博客 Android Bander设计与实现 - 设计篇。 Binder 的优势简介Binder 是 Android 系统中的进程间通信方式之一，它是基于 Client-Server 的通信方式。相较于 Linux 系统中的其他进程间通信方式而言，它具有传输效率高、开销小的特点。"><meta property="og:type" content="blog"><meta property="og:title" content="Android Binder 设计分析"><meta property="og:url" content="https://l0neman.github.io/2020/07/14/android-binder-%E8%AE%BE%E8%AE%A1%E5%88%86%E6%9E%90/"><meta property="og:site_name" content="l0neman 的博客"><meta property="og:description" content="前言以下 Binder 设计部分整理至 universus 的博客 Android Bander设计与实现 - 设计篇。 Binder 的优势简介Binder 是 Android 系统中的进程间通信方式之一，它是基于 Client-Server 的通信方式。相较于 Linux 系统中的其他进程间通信方式而言，它具有传输效率高、开销小的特点。"><meta property="og:locale" content="zh_CN"><meta property="og:image" content="https://l0neman.github.io/2020/07/14/android-binder-%E8%AE%BE%E8%AE%A1%E5%88%86%E6%9E%90/image/android_binder_design/binder_design_write_read.png"><meta property="article:published_time" content="2020-07-14T15:32:18.000Z"><meta property="article:modified_time" content="2020-07-14T15:32:18.000Z"><meta property="article:author" content="l0neman"><meta property="article:tag" content="Android"><meta property="article:tag" content="Binder"><meta property="twitter:card" content="summary"><meta property="twitter:image" content="./image/android_binder_design/binder_design_write_read.png"><script type="application/ld+json">{"@context":"https://schema.org","@type":"BlogPosting","mainEntityOfPage":{"@type":"WebPage","@id":"https://l0neman.github.io/2020/07/14/android-binder-%E8%AE%BE%E8%AE%A1%E5%88%86%E6%9E%90/"},"headline":"l0neman 的博客","image":["https://l0neman.github.io/2020/07/14/android-binder-%E8%AE%BE%E8%AE%A1%E5%88%86%E6%9E%90/image/android_binder_design/binder_design_write_read.png"],"datePublished":"2020-07-14T15:32:18.000Z","dateModified":"2020-07-14T15:32:18.000Z","author":{"@type":"Person","name":"l0neman"},"description":"前言以下 Binder 设计部分整理至 universus 的博客 Android Bander设计与实现 - 设计篇。 Binder 的优势简介Binder 是 Android 系统中的进程间通信方式之一，它是基于 Client-Server 的通信方式。相较于 Linux 系统中的其他进程间通信方式而言，它具有传输效率高、开销小的特点。"}</script><link rel="canonical" href="https://l0neman.github.io/2020/07/14/android-binder-%E8%AE%BE%E8%AE%A1%E5%88%86%E6%9E%90/"><link rel="icon" href="/img/avatar.png"><link rel="stylesheet" href="https://cdnjs.loli.net/ajax/libs/font-awesome/5.12.0/css/all.min.css"><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/highlight.js@9.12.0/styles/atom-one-light.css"><link rel="stylesheet" href="https://fonts.loli.net/css2?family=Ubuntu:wght@400;600&amp;family=Source+Code+Pro"><link rel="stylesheet" href="/css/default.css"><style>body>.footer,body>.navbar,body>.section{opacity:0}</style><!--!--><script>var _hmt = _hmt || [];
+        (function() {
+            var hm = document.createElement("script");
+            hm.src = "//hm.baidu.com/hm.js?1727d76e0a823184efc8776f32a916a9";
+            var s = document.getElementsByTagName("script")[0];
+            s.parentNode.insertBefore(hm, s);
+        })();</script><script src="//busuanzi.ibruce.info/busuanzi/2.3/busuanzi.pure.mini.js" defer></script><!--!--><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/lightgallery@1.6.8/dist/css/lightgallery.min.css"><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/justifiedGallery@3.7.0/dist/css/justifiedGallery.min.css"><!--!--><!--!--><script src="https://cdn.jsdelivr.net/npm/pace-js@1.0.2/pace.min.js"></script></head><body class="is-2-column"><nav class="navbar navbar-main"><div class="container"><div class="navbar-brand justify-content-center"><a class="navbar-item navbar-logo" href="/"><img src="/img/logo.png" alt="l0neman 的博客" height="28"></a></div><div class="navbar-menu"><div class="navbar-start"><a class="navbar-item" href="/">主页</a><a class="navbar-item" href="/archives">归档</a><a class="navbar-item" href="/categories">分类</a><a class="navbar-item" href="/tags">标签</a><a class="navbar-item" href="/about">关于</a></div><div class="navbar-end"><a class="navbar-item" target="_blank" rel="noopener" title="Download on GitHub" href="https://github.com/l0neman"><i class="fab fa-github"></i></a><a class="navbar-item is-hidden-tablet catalogue" title="目录" href="javascript:;"><i class="fas fa-list-ul"></i></a><a class="navbar-item search" title="搜索" href="javascript:;"><i class="fas fa-search"></i></a></div></div></div></nav><section class="section"><div class="container"><div class="columns"><div class="column order-2 column-main is-three-quarters"><div class="card"><article class="card-content article" role="article"><div class="article-meta size-small is-uppercase level is-mobile"><div class="level-left"><time class="level-item" dateTime="2020-07-14T15:32:18.000Z" title="2020-07-14T15:32:18.000Z">2020-07-14</time><span class="level-item"><a class="link-muted" href="/categories/android-%E7%B3%BB%E7%BB%9F%E5%8E%9F%E7%90%86/">Android 系统原理</a></span><span class="level-item">1 小时 读完 (大约 11224 个字)</span><span class="level-item" id="busuanzi_container_page_pv"><i class="far fa-eye"></i>&nbsp;&nbsp;<span id="busuanzi_value_page_pv">0</span>次访问</span></div></div><h1 class="title is-3 is-size-4-mobile">Android Binder 设计分析</h1><div class="content"><h2 id="前言"><a href="#前言" class="headerlink" title="前言"></a>前言</h2><p>以下 Binder 设计部分整理至 universus 的博客 <a href="https://blog.csdn.net/universus/article/details/6211589">Android Bander设计与实现 - 设计篇</a>。</p>
+<h2 id="Binder-的优势"><a href="#Binder-的优势" class="headerlink" title="Binder 的优势"></a>Binder 的优势</h2><h3 id="简介"><a href="#简介" class="headerlink" title="简介"></a>简介</h3><p>Binder 是 Android 系统中的进程间通信方式之一，它是基于 Client-Server 的通信方式。<br>相较于 Linux 系统中的其他进程间通信方式而言，它具有传输效率高、开销小的特点。</p>
+<a id="more"></a>
+
+
+<h3 id="Linux-IPC"><a href="#Linux-IPC" class="headerlink" title="Linux IPC"></a>Linux IPC</h3><p>Linux 的进程间通信方式包括管道、system V IPC、socket、消息队列等。</p>
+<ol>
+<li>Socket 是一个通用的进程间通信接口，传输效率低，开销大，主要用在跨网络的进程间通信和本机的进程间通信。</li>
+<li>管道和消息队列采用存储-转发的方式，首先将数据从发送方复制到内核缓冲区，然后再复制到接收方。</li>
+<li>共享内存无需拷贝数据，但是需要复制的控制，难以使用。</li>
+</ol>
+<h3 id="IPC-对比"><a href="#IPC-对比" class="headerlink" title="IPC 对比"></a>IPC 对比</h3><p>各个 IPC 方式的拷贝次数：</p>
+<table>
+<thead>
+<tr>
+<th>通信方式</th>
+<th>拷贝次数</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>共享内存</td>
+<td>0</td>
+</tr>
+<tr>
+<td>Binder</td>
+<td>1</td>
+</tr>
+<tr>
+<td>Socker/管道/消息队列</td>
+<td>2</td>
+</tr>
+</tbody></table>
+<h3 id="Binder-特点"><a href="#Binder-特点" class="headerlink" title="Binder 特点"></a>Binder 特点</h3><p>相较于以上 Linux 进程间通信方式，针对 Android 设计的 Binder 通信具有如下特点：</p>
+<ol>
+<li>Binder 采用共享内存的方式，将数据缓存同时映射到接收方和内核空间，发送方只需要拷贝一次数据即可完成通信。</li>
+<li>Binder 驱动在转发数据的过程中在通过内核向数据中写入进程的 UID 和 PID，使接收端可验证发送端身份，保证通信安全性，而传统的 Linux IPC 方式则无法通过这种方式鉴别发送方身份。</li>
+<li>Binder 使用了面向对象的思想来描述 Server 端的访问接入点和 Client 端的入口，Binder 是一个实体位于 Server 端的对象，它提供了一套访问 Server 端的方法，类似于类的成员方法，Client 端的入口则作为这个 Binder 对象的“句柄”，此时 Client 端访问 Server 端就像调用对象的方法一样容易，同时 Client 端的本地“句柄”对象也可以在进程间相互传递，使各处都可访问同一个 Server，Binder 弱化了进程间通信过程，使整个系统仿佛运行在面向对象的程序中。</li>
+</ol>
+<h3 id="总结"><a href="#总结" class="headerlink" title="总结"></a>总结</h3><p>Binder 作为 Android 系统的主要的进程间通信方式，保证性能的同时，还兼顾了通信安全性和使用的便捷性。 基于 Client-Server 的方式，支持实名和匿名通信，是一种非常适合于便携式和嵌入式设备通信的 IPC 方式 。</p>
+<h2 id="Binder-通信模型"><a href="#Binder-通信模型" class="headerlink" title="Binder 通信模型"></a>Binder 通信模型</h2><p>Binder 通信框架定义了 4 个组件角色，Server，Client，ServiceManager 和 Binder 驱动。 其中 Binder 驱动运行于内核层，它负责实现进程间通信的核心功能，管理每个 Server 端的 Binder 实体对象，以及 Client 中的 Binder 引用，Client 表示向 Server 端发起请求的客户端，Server 作为服务端负责处理 Client 端的请求，ServiceManager 负责管理 Server 的注册和申请，类似 DNS 服务器中注册服务器的域名，和浏览器向 DNS 服务器请求网站真实的 IP 地址的过程。</p>
+<h3 id="Binder-驱动"><a href="#Binder-驱动" class="headerlink" title="Binder 驱动"></a>Binder 驱动</h3><ol>
+<li>Binder 驱动是一个运行在内核态的标准设备驱动，但是和硬件没有关系，它的实现遵循标准驱动的实现。</li>
+<li>Binder 驱动提供了 open()，mmap()，poll()，ioctl() 等标准文件操作，它以字符驱动设备中的 misc 设备注册在 /dev/ 下，用户通过/dev/binder 访问该它。</li>
+<li>Binder 驱动负责进程之间 Binder 通信的建立，Binder 在进程间的建立，Binder 在进程间的传递，Binder 引用技术管理，数据包在进程间的传递等底层支持。</li>
+<li>Binder 驱动使用 ioctl() 接口实现，它可实现一次调用，读写操作依次同时执行，相较于 read() 和 write() 更加灵活方便。</li>
+</ol>
+<h3 id="ServiceManager-和-Server"><a href="#ServiceManager-和-Server" class="headerlink" title="ServiceManager 和 Server"></a>ServiceManager 和 Server</h3><ol>
+<li>ServiceManager 建立 Binder 名字和 Binder 实体的映射，Client 可通过字符形式的 Binder 名字请求 Binder 的引用。</li>
+<li>Server 创建 Binder 实体后，通过驱动将 Binder 名字及实体通过 Binder 驱动发至 ServiceManager 请求注册，驱动在内核中创建对应此 Server 进程中 Binder 实体的对应节点，以及 ServiceManager 中对此 Binder 的引用，然后将 Binder 名字和引用通过数据包传送给 ServiceManager，此时 ServiceManager 将名字和 Binder 引用存入查找表中。</li>
+<li>当 Server 向 ServiceManager 请求注册时，这个过程本身就需要进程间通信，需要获取 ServiceManager 中 Binder 实体的引用，由于 ServiceManager 本身负责管理 Binder 的注册和引用的分配，所以在此之前，ServiceManager 通过向驱动发送 BINDER_SET_CONTEXT_MGR 命令请求注册自身为 ServiceManager，当 Server 需要请求 ServiceManager 的 Binder 引用时，只要向驱动请求 0 号引用即可获得，所有 Server 都可通过 0 号引用通过驱动向 ServiceManager 发送注册请求。</li>
+<li>对于 ServiceManager 来说，所有的 Server 都是 Client，只不过任务很单一，知识为了注册 Server。</li>
+</ol>
+<h3 id="Client"><a href="#Client" class="headerlink" title="Client"></a>Client</h3><p>Client 使用 0 号引用通过驱动向 ServiceManager 发送 Binder 名字请求获取 Server 端 Binder 的引用，ServiceManager 此时将会从表中查询 Binder 引用然后通过驱动回复给 Client。此时 Binder 引用在 Client 和 ServiceManager 各存在一个。 </p>
+<h3 id="Binder"><a href="#Binder" class="headerlink" title="Binder"></a>Binder</h3><p>Binder 可分为实名 Binder 和匿名 Binder。</p>
+<ul>
+<li>实名 Binder</li>
+</ul>
+<p>所有将名字和引用注册到 ServiceManager 的 Binder 实体都是实名 Binder。</p>
+<ul>
+<li>匿名 Binder</li>
+</ul>
+<p>匿名 Binder 指没有在 ServiceManager 中注册名字的 Binder，当 Client 与 Server 建立连接时可将新创建的 Binder 传递给 Client，此时 Client 将和匿名 Binder 实现私密通道，第三方进程无法通过穷举获取匿名 Binder 的引用。</p>
+<h2 id="Binder-协议"><a href="#Binder-协议" class="headerlink" title="Binder 协议"></a>Binder 协议</h2><h3 id="ioctl"><a href="#ioctl" class="headerlink" title="ioctl"></a>ioctl</h3><p>Binder 协议使用 <code>ioctl(fd, cmd, arg)</code> 函数实现，fd 为驱动的文件描述符，cmd 参数为命令，arg 为参数，每种 cmd 对应的 arg 结构也不同。当通过驱动进行通信时，首先使用 <code>open</code> 打开驱动文件，然后使用返回的文件描述符调用 <code>ioctl</code> 进行通信。</p>
+<table>
+<thead>
+<tr>
+<th>cmd</th>
+<th align="left">解释</th>
+<th>参数</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>BINDER_WRITE_READ</td>
+<td align="left">向 Binder 发送读写命令，参数分为写和读两部分，如果 <code>write_size</code> 不为 0 则首先将 <code>write_buffer</code> 里的数据写入 Binder，其次 <code>read_size</code> 不为 0 再从 Binder 中读取数据存入 <code>read_buffer</code> 中，<code>write_consumed</code> 和 <code>read_consumed</code> 表示操作完成时 Binder 驱动实际发送的</td>
+<td>struct binder_write_read<br />{<br />signed long write_size;<br />signed long write_consumed;<br />unsigned long write_buffer;<br />signed long read_size;<br />signed long read_consumed;<br />unsigned long read_buffer;<br />};</td>
+</tr>
+<tr>
+<td>BINDER_SET_MAX_THREADS</td>
+<td align="left">告知 Binder 驱动接收方（Server 端）线程池的最大线程数，Client 告知 Server 端需要开辟多大的线程池为并发请求提供服务，为了让驱动发现线程数达到该值时不要再命令接收端启动新的线程。</td>
+<td>int max_threads;</td>
+</tr>
+<tr>
+<td>BINDER_SET_CONTEXT_MGR</td>
+<td align="left">注册当前进程为 ServiceManager，直到当前 ServiceManager 调用 close()，系统中只能存在一个 ServiceManager。</td>
+<td>-</td>
+</tr>
+<tr>
+<td>BINDER_THREAD_EXIT</td>
+<td align="left">通知 Binder 驱动当前线程退出，驱动会释放为参与 Binder 通信的相应线程建立的结构。</td>
+<td>-</td>
+</tr>
+<tr>
+<td>BINDER_VERSION</td>
+<td align="left">获取 Binder 驱动的版本号。</td>
+<td>-</td>
+</tr>
+</tbody></table>
+<h3 id="BINDER-WRITE-READ-写入"><a href="#BINDER-WRITE-READ-写入" class="headerlink" title="BINDER_WRITE_READ 写入"></a>BINDER_WRITE_READ 写入</h3><p><code>BINDER_WRITE_READ</code> 命令的数据写入格式为命令+数据，多条命令可连续存放，对应的命令后面写入对应的数据结构，最后将这段内存的指针赋给 <code>binder_write_read</code> 结构体的 <code>write_buffer</code>。</p>
+<table>
+<thead>
+<tr>
+<th>命令</th>
+<th>解释</th>
+<th>数据</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>BC_TRANSACTION<br />BC_REPLY</td>
+<td>1. <code>BC_TRANSACTION</code> 用于 Client 端向 Server 端发送请求。<br />2. <code>BC_REPLY</code> 用于 Server 端向 Client 回复数据。<br />3. 命令后面接 <code>binder_transaction_data</code> 用于存放数据。</td>
+<td>struct binder<br />transaction<br />_data</td>
+</tr>
+<tr>
+<td>BC_ACQUIRE_RESULT<br />BC_ATTEMPT_ACQUIRE</td>
+<td>暂未实现</td>
+<td>-</td>
+</tr>
+<tr>
+<td>BC_FREE_BUFFER</td>
+<td>释放映射的内存空间，Binder 接收方通过 mmap 方法映射了一块内存，Binder 驱动使用这块内存，采用佳匹配算法实现接收数据缓存的动态分配和释放，满足并发请求对接收缓存区的需求。应用程序处理完这片数据后需要使用该命令释放缓存区，避免因为缓存区耗尽而无法接收新数据。</td>
+<td>指向需要释放的缓存区的指针；指针位于收到的 Binder数据包中。</td>
+</tr>
+<tr>
+<td>BC_INCREFS <br/>BC_ACQUIRE<br />BC_RELEASE<br />BC_DECREFS</td>
+<td>这组命令增加或减少 Binder 的引用计数，用以实现强指针或弱指针的功能。</td>
+<td>32 位 Binder引用号。</td>
+</tr>
+<tr>
+<td>BC_INCREFS_DONE <br/>BC_ACQUIRE_DONE</td>
+<td>1. 第一次增加 Binder 实体引用计数时，驱动向 Binder 实体所在的进程发送 <code>BR_INCREFS</code>, <code>BR_ACQUIRE</code> 消息。<br />2. Binder 实体所在的进程处理完毕回复 <code>BC_INCREFS_DONE</code>，<code>BC_ACQUIRE_DONE</code>。</td>
+<td>1. <code>void *ptr</code>：Binder实体在用户空间中的指针。<br />2. <code>void *cookie</code>：与该实体相关的附加数据。</td>
+</tr>
+<tr>
+<td>BC_REGISTER_LOOPER <br/>BC_ENTER_LOOPER<br />BC_EXIT_LOOPER</td>
+<td>1. 与 <code>BINDER_SET_MAX_THREADS</code> 共同实现 Binder 驱动对接收方线程池管理。<br />2. <code>BC_REGISTER_LOOPER</code> 通知驱动线程池中的一个线程已经创建了。<br />3. <code>BC_ENTER_LOOPER</code> 通知驱动该线程已经进入主循环，可以接受数据。<br />4. <code>BC_EXIT_LOOPER</code> 通知驱动该线程退出主循环，不再接受数据。</td>
+<td>-</td>
+</tr>
+<tr>
+<td>BC_REQUEST_DEATH_NOTIFICATION</td>
+<td>已经获得 Binder 引用的进程通过此命令请求驱动在 Binder 实体销毁时得到通知。虽然强指针可以确保引用存在时实体不会被销毁，但没人能保证是否由于实体所在的 Server 关闭 Binder 驱动或者异常退出而消失，引用者能做的就是要求 Server 在此时给出通知。</td>
+<td>1. <code>uint32 *ptr</code> 需要得到死亡通知的 Binder 引用。<br />2. <code>void **cookie</code> 与死亡通知相关的信息，驱动会在发出死亡通知时返回给发出请求的进程。</td>
+</tr>
+<tr>
+<td>BC_DEAD_BINDER_DONE</td>
+<td>收到 Binder 实体通知的进程在删除 Binder 引用后使用本命令告知驱动。</td>
+<td><code>void **cookie</code></td>
+</tr>
+</tbody></table>
+<h3 id="BINDER-WRITE-READ-读取"><a href="#BINDER-WRITE-READ-读取" class="headerlink" title="BINDER_WRITE_READ 读取"></a>BINDER_WRITE_READ 读取</h3><p>从 Binder 读取的格式与写入数据格式一致，使用（消息 ID+数据）的形式，多条可连续存放。</p>
+<table>
+<thead>
+<tr>
+<th>命令</th>
+<th>解释</th>
+<th>参数</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>BR_ERROR</td>
+<td>发生内部错误（如内存分配失败）</td>
+<td>-</td>
+</tr>
+<tr>
+<td>BR_OK<br />BR_NOOP</td>
+<td>操作完成</td>
+<td>-</td>
+</tr>
+<tr>
+<td>BR_SPAWN_LOOPER</td>
+<td>用于接收方线程管理，当驱动发现接收方所有线程都处于忙碌状态且线程池里的线程总数没有 <code>BINDER_SET_MAX_THREADS</code> 设置的最大线程数时，向接收方发送该命令要求创建更多线程以备接受数据。</td>
+<td>-</td>
+</tr>
+<tr>
+<td>BR_TRANSACTION<br />BR_REPLY</td>
+<td>对应发送方的 <code>BC_TRANSCATION</code> 和 <code>BC_REPLY</code></td>
+<td>binder_transcation_data</td>
+</tr>
+<tr>
+<td>BR_ACQUIRE_RESULT<br />BR_ATTEMPT_ACQUIRE<br />BR_FINISHED</td>
+<td>尚未实现</td>
+<td>-</td>
+</tr>
+<tr>
+<td>BR_DEAD_REPLY</td>
+<td>交互过程中如果发现对方进程或线程已经死亡则返回该消息。</td>
+<td>-</td>
+</tr>
+<tr>
+<td>BR_TRANSACTION_COMPLETE</td>
+<td>发送方通过 <code>BC_TRANSACTION</code> 或 <code>BC_REPLY</code> 发送完一个数据包后，都能收到该消息作为成功的反馈。无论异步或同步。</td>
+<td>-</td>
+</tr>
+<tr>
+<td>BR_INCREFS<br />BR_ACQUIRE<br />BR_RELEASE<br />BR_DECREFS</td>
+<td>用于管理强/弱指针的引用计数，只有提供 Binder 实体的进程才能收到该组消息。</td>
+<td>1. <code>void *ptr</code> Binder 实体在用户空间的指针。<br />2. <code>void *cookie</code> 与该实体相关的附加数据。</td>
+</tr>
+<tr>
+<td>BR_DEAD_BINDER<br />BR_CLEAR_DEATH_NOTIFICATION_DONE</td>
+<td>1. 向获得 Binder 引用的进程发送Binder 实体死亡通知书。<br />2. 收到死亡通知书的进程接下来会返回 <code>BC_DEAD_BINDER_DONE</code> 做确认。</td>
+<td><code>void **cookie</code> 在使用BC_REQUEST<br />_DEATH_NOTIFICATION 注册死亡通知时的附加参数。</td>
+</tr>
+<tr>
+<td>BR_FAILED_REPLY</td>
+<td>如果发送非法引用号则返回该消息。</td>
+<td>-</td>
+</tr>
+</tbody></table>
+<h3 id="binder-transaction-data-结构"><a href="#binder-transaction-data-结构" class="headerlink" title="binder_transaction_data 结构"></a>binder_transaction_data 结构</h3><p>binder_transaction_data 表示收发数据包结构，使用时将它接在 <code>TRANSACTION</code> 和 <code>RELPY</code> 命令后面。</p>
+<table>
+<thead>
+<tr>
+<th>成员</th>
+<th>解释</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>union {<br />size_t handle;<br />void *ptr;<br />} target;</td>
+<td>1. 对于发送数据包的一方，该成员指定发送目的地。由于目的地在远端，所以这里填入的是对 Binder 实体的引用，存放在 <code>target.handle</code> 中。<br />2. 当数据包到达接收方时，驱动将该成员转换成 Binder 实体，即指向 Binder 对象内存的指针，使用 <code>target.ptr</code> 来保存。<br />3. <code>target.ptr</code> 指针是接收方在将 Binder 实体传输给其他进程时提交给驱动的，驱动能够自动将发送方填入的引用转换成接收方 Binder 对象的指针，接收方可直接作为对象指针使用。（通常使用 <code>reinterpret_cast</code> 转换）。</td>
+</tr>
+<tr>
+<td>void *cookie</td>
+<td>1. 发送方忽略该成员。<br />2. 接收方收到数据包时，该成员存放的是创建 Binder 实体时由该接收方自定义的任意数值，作为与 Binder 指针相关的额外信息存放在驱动中，驱动基本不关心该数据。</td>
+</tr>
+<tr>
+<td>unsigned int code;</td>
+<td>该成员存放收发双方约定的命令码，驱动完全不关心该成员的内容。一般为 Server 端定义的公共接口函数的编号。</td>
+</tr>
+<tr>
+<td>unsigned int flags;</td>
+<td>1. 交互相关的标志位<br />2. 当为 <code>TF_ONE_WAY</code> 表示这次交互为异步的，Server 端不会返回数据。驱动利用该位来决定是否建立与返回有关的数据结构。<br />3. 当为 <code>TF_ACCEPT_FDS</code> 是处于安全考虑，如果发起请求的一方不希望再收到回复中接受文件形式的 Binder，当收到一个文件形式的 Binder 会自动为数据接收方打开一个文件，这时可以使用该位避免打开文件过多。</td>
+</tr>
+<tr>
+<td>pid_t sender_pid;<br />uid_t sender_euid;</td>
+<td>1. 该成员存放发送方的进程 ID 和用户 ID，由驱动负责填入。<br />2. 接收方可以读取该成员获知发送方的身份。</td>
+</tr>
+<tr>
+<td>size_t data_size;</td>
+<td>1. 该成员表示 <code>data.buffer</code> 指向的缓冲区存放的数据长度。发送数据时由发送方填入，表示即将发送的数据长度。<br />2. 在接收方用来告知接收到数据的长度。</td>
+</tr>
+<tr>
+<td>size_t offsets_size;</td>
+<td>Binder 驱动通常不关心 <code>data.buffer</code> 里存放的数据，但如果有 Binder 在其中传输则需要将其相对 <code>data.buffer</code> 的偏移位置指出来让驱动知道。可能存在多个 Binder 同时在数据中传递，所以须用数组表示所有偏移位置。本成员表示该数组的大小。</td>
+</tr>
+<tr>
+<td>union {<br />struct {<br />const void *buffer;<br />const void *offsets;<br />} ptr;<br />uint8_t buf[8];<br />} data;</td>
+<td>1. <code>data.buffer</code> 存放要发送或接收到的数据。<br />2. <code>data.offsets</code> 指向 Binder 偏移位置数组，该数组可以位于 <code>data.buffer</code> 中，也可以在另外的内存空间中，并无限制。<code>buf[8]</code> 是为了无论保证 32 位还是 64 位平台，成员 data 的大小都是 8 个字节。</td>
+</tr>
+</tbody></table>
+<p>下图说明了 BINDER_WRITE_READ 通信的数据包示例：</p>
+<p><img src="./image/android_binder_design/binder_design_write_read.png" alt="binder_write_read"></p>
+<h2 id="Binder-层次概述"><a href="#Binder-层次概述" class="headerlink" title="Binder 层次概述"></a>Binder 层次概述</h2><p>Binder 位于系统以下几个部分：</p>
+<ul>
+<li>应用层：位于 Server 进程和 Client 进程中。</li>
+<li>Binder 驱动层：分别管理 Server 端的 Binder 实体和 Client 端的引用。</li>
+<li>Binder 传输结构：跨进程传递 Binder，使用数据结构描述。</li>
+</ul>
+<h3 id="Binder-应用层"><a href="#Binder-应用层" class="headerlink" title="Binder 应用层"></a>Binder 应用层</h3><p>Binder 使用面向对象的思想设计，但不限于必须使用面向对象的语言实现通信，Native 层的 ServiceManager 就是使用 C 语言实现的。</p>
+<p>存在于 Android 应用层的 Server 端通常使用面向对象实现，首先 Server 端为了给 Client 端提供服务，需要实现一套提供服务的接口函数，这时通常采用 Proxy 设计模式，将功能函数抽象成一个接口，Server 和 Client 端同时实现这个接口，Server 实现对应函数的功能，而 Client 则实现对 Server 端对应功能的请求，及代理，此时 Client 端使用 Server 端服务就像直接使用本地方法一样简单。</p>
+<p>如何将 Binder 通信和 Proxy 设计模式结合起来是应用程序实现面向对象Binder通信的根本问题。</p>
+<h3 id="Binder-Server-端"><a href="#Binder-Server-端" class="headerlink" title="Binder Server 端"></a>Binder Server 端</h3><ul>
+<li>Binder 实体是 Binder 在 Server 端的表述</li>
+</ul>
+<p>使用 Binder 通信首先定义包含功能函数的接口，然后 Server 端和 Client 端的 Proxy 类各自实现该接口，由于功能函数需要跨进程调用，所以需要使用数字一一编号，Server 端接收到编号即可决定调用哪个功能函数。此时需要引入 Binder，Server 端定义另一个 Binder 抽象类处理来自 Client 端的 Binder 请求数据包，其中核心成员为 <code>onTransact()</code> 方法，该方法负责接收数据包，然后根据分析数据包处理不同请求。</p>
+<ul>
+<li>Binder 数据包的接收</li>
+</ul>
+<p>使用继承方式构建一个同时实现功能函数接口和 Binder 抽象类的 Server 端 Binder 实体，并实现所有函数，包括数据包处理函数 <code>onTransact()</code>，它的输入来自 Client 端发出的 <code>binder_transaction_data</code> 结构的数据包。其中有一个 <code>code</code> 成员即为约定的函数调用编号，<code>onTransact()</code> 方法将 case-by-case 解析 <code>code</code> 值，并从数据包中提取函数参数，请求调用相应的功能函数，并将函数执行完毕的数据写回一个新构建的 <code>binder_transaction_data</code> 数据包中返回。</p>
+<ul>
+<li>Binder 数据包的分发</li>
+</ul>
+<p>Binder 实体必须以 Binder 传输结构 <code>flat_binder_object</code> 的形式发送给其他进程才能建立进程间通信，其中 Binder 实体的引用号存在于其 <code>handle</code> 成员中，Binder 驱动根据 Binder 实体的位置从传输数据结构中获取该 Binder 的传输结构，并创建对应的 Binder 在内核中的节点，当有其他进程向该 Binder 发送数据时，驱动会根据内核节点中记录的信息将 Binder 实体指针填入 <code>binder_transaction_data</code> 中的 <code>target.ptr</code> 成员中返回给接收线程。接收线程中数据包中解析出该指针，使用 <code>reinterpret_cast</code> 将 Binder 转换成 Binder 抽象类，并调用其 <code>onTransact()</code> 函数，即可调用到不同的 Binder 实体的对应的 <code>onTransact()</code> 函数的实现。</p>
+<h3 id="Binder-Client-端"><a href="#Binder-Client-端" class="headerlink" title="Binder Client 端"></a>Binder Client 端</h3><ul>
+<li>Binder 引用是 Binder 在 Client 端的表述</li>
+</ul>
+<p>Client 端的 Binder 也需要实现和服务的相同的功能函数的接口，但并不是实现功能，而是作为代理实现对远程功能函数的包装，将函数的参数通过 Binder 打包发送至 Server 端，此时 Client 还需要知道 Binder 实体相关的信息，即对实体 Binder 的引用，该引用由 ServiceManager 返回，或者是另一种由另一个进程直接发送过来的对匿名 Binder 的引用。</p>
+<ul>
+<li>发送 Binder 请求</li>
+</ul>
+<p>由于 Client 端 Binder 实现了和 Server 端相同的功能函数接口，所以 Client 端使用起来就像使用本地的功能函数一样，对用户无感知。对远端功能函数的包装方法为：创建一个 <code>binder_transaction_data</code> 数据包，将对应的功能函数编码填入 <code>code</code> 成员中，将函数参数填入 <code>data.buffer</code> 成员中，并将目标 Binder 的引用填入数据包的 <code>target.handle</code> 成员中，<code>target</code> 本身是一个联合体，有 <code>ptr</code> 和 <code>handle</code> 两个成员，前者用于 Server 端，其中存放了指向 Binder 实体对应的内存空间的指针，后者用于 Client 端，存放 Binder 实体的引用号，告知驱动需要发送的目标 Binder 实体，数据包打包完成后，通过 Binder 驱动的方法通过 <code>BC_TRANSACTION/BC_REPLY</code> 指令完成和远程功能函数的调用交互。</p>
+<h3 id="Binder-传输结构"><a href="#Binder-传输结构" class="headerlink" title="Binder 传输结构"></a>Binder 传输结构</h3><ul>
+<li>Binder 通过 <code>flat_binder_object</code> 结构在数据包中进行跨进程传输</li>
+</ul>
+<table>
+<thead>
+<tr>
+<th>成员</th>
+<th>解释</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>unsigned long type</td>
+<td>表明 Binder 的类型，有如下几种：<br /><code>BINDER_TYPE_BINDER</code>：表示传递的是 Binder 实体，并且指向该实体的引用都是强类型。<br /><code>BINDER_TYPE_WEAK_BINDER</code>：表示传递的是 Binder 实体，并且指向该实体的引用都是弱引用。<br /><code>BINDER_TYPE_HANDLE</code>：表示传递的是 Binder 强引用类型。<br /><code>BINDER_TYPE_WEAK_HANDLE</code>，表示传递的是 Binder 弱引用类型。<br /><code>BINDER_TYPE_FD</code> 表示传递的是文件形式的 Binder。</td>
+</tr>
+<tr>
+<td>unsigned long flags</td>
+<td>此成员只对首次传递 Binder 有效，因为首次传递，Binder 驱动将在内核中创建 Binder 对应的实体节点，需要从此成员获取值。<br />0-7 位，使用 <code>FLAT_BINDER_FLAG_PRIORITY_MASK</code> 取出值，表示处理本实体请求数据包的线程的最低优先级。当一个应用程序提供多个实体时，可以通过该参数调整分配给各个实体的处理能力。<br />第 8 位：代码中用 <code>FLAT_BINDER_FLAG_ACCEPTS_FDS</code> 取出值，值为 1 表示该实体可以接收其它进程发过来的文件形式的 Binder，由于接收文件形式的Binder会在本进程中自动打开文件，有些Server可以用该标志禁止该功能，以防打开过多文件。</td>
+</tr>
+<tr>
+<td>union {<br />void *binder;<br />signed long handle;<br />}</td>
+<td>当传递的是 Binder 实体时使用 binder 域，指向 Binder 实体在应用程序中的地址。<br />当传递的是 Binder 引用时使用 handle 域，存放 Binder 在进程中的引用号。</td>
+</tr>
+<tr>
+<td>void *cookie</td>
+<td>该域只对 Binder 实体有效，存放与该 Binder 有关的附加信息。</td>
+</tr>
+</tbody></table>
+<ul>
+<li>Binder 传输结构的传输</li>
+</ul>
+<p>不管是 Binder 实体还是其引用，都可能属于任意一个进程，所以 Binder 传输结构不能透明的在进程间传递，其中的信息必须经过驱动的翻译转换，才能让每个进程正确的使用 Binder 进程通信，例如在 Server 端将 Binder 实体传递给 Client 时，通过 <code>flat_binder_object</code> 结构进程传递，此时其中的 <code>type</code> 成员是 <code>BINDER_TYPE_BINDER</code> 类型，Binder 指向的是 Server 端的用户空间的内存地址，对 Client 端无用，驱动此时必须对 Binder 进行转换，将 <code>type</code> 改成 <code>BINDER_TYPE_HANDLE</code> ，为这个 Binder 在接收进程中创建位于内核中的引用，并将 Binder 实体的引用号填入 <code>handle</code> 中，对于 Binder 传输结构中发送的 Binder 引用类型也要做相同的转换，经过驱动翻译处理后的 Binder 引用才是可用的，此时才能填入 <code>flat_binder_object</code> 中的 <code>handle</code> 成员，向 Binder 实体发送请求。</p>
+<ul>
+<li>Binder 验证</li>
+</ul>
+<p>由于 Binder 在进程间的传输需要驱动的翻译，所以进程不能随意猜测一个 Binder 引用号就能向 Server 端请求服务，必须是由驱动在内核中创建对应的合法引用才行，需要使用由驱动注册相应的 Binder 节点亲自授予的引用号,必须经过驱动进行合法的验证，通过后才能进行通信，否则将被拒绝。</p>
+<ul>
+<li>驱动对 <code>flat_binder_object</code> 结构的转换</li>
+</ul>
+<table>
+<thead>
+<tr>
+<th>Binder 类型（type 成员）</th>
+<th>发送方的操作</th>
+<th>接收方的操作</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>BINDER_TYPE_BINDER<br />BINDER_TYPE_WEAK_BINDER</td>
+<td>1. 只有实体所在的进程能发送该类型的Binder。<br />2. 如果是第一次发送驱动将创建实体在内核中的节点，并保存<code>binder</code>，<code>cookie</code> 和 <code>flag</code> 成员。</td>
+<td>1. 如果是第一次接收该 Binder 则创建实体在内核中的引用；将 <code>handle</code> 成员替换为新建的引用号；将 <code>type</code> 成员替换为 <code>BINDER_TYPE_HANDLE</code> 或 <code>BINDER_TYPE_WEAK_HANDLE</code>。</td>
+</tr>
+<tr>
+<td>BINDER_TYPE_HANDLE<br />BINDER_TYPE_WEAK_HANDLE</td>
+<td>1. 获得 Binder 引用的进程都能发送该类型 Binder。<br /><br />2. 驱动根据 <code>handle</code> 域提供的引用号查找建立在内核的引用，如果找到说明引用号合法，否则拒绝该发送请求。</td>
+<td>1. 如果收到的 Binder 实体位于接收进程中：将 <code>ptr</code> 成员替换为保存在节点中的 <code>binder</code> 值；<code>cookie</code> 替换为保存在节点中的 <code>cookie</code> 值；<code>type</code> 替换为 <code>BINDER_TYPE_BINDER</code> 或 <code>BINDER_TYPE_WEAK_BINDER</code>。<br />2. 如果收到的 Binder 实体不在接收进程中：如果是第一次接收则创建实体在内核中的引用；将 <code>handle</code> 域替换为新建的引用号。</td>
+</tr>
+<tr>
+<td>BINDER_TYPE_FD</td>
+<td>验证 <code>handle</code> 成员中提供的打开文件号是否有效，无效则拒绝该发送请求。</td>
+<td>在接收方创建新的打开文件号并将其与提供的打开文件描述结构绑定。</td>
+</tr>
+</tbody></table>
+<ul>
+<li>文件形式的 Binder</li>
+</ul>
+<p>文件形式的 Binder 是一种特殊的 Binder，将文件看作一个 Binder 实体，进程打开的文件号看作 Binder 的引用，一个进程可将打开文件的文件号传递给另一个进程，从而另一个进程也打开了同一个文件。</p>
+<p>一个进程打开一个文件，获得与之对应的文件号，从 Binder 角度，Linux 在内核创建的对应的文件描述结构 <code>struct file</code> 做为 Binder 实体，这时可通过 <code>flat_binder_object</code> 结构在进程间进行传递，<code>type</code> 成员此时为 <code>BINDER_TYPE_FD</code>，表示此 Binder 为文件 Binder，驱动将会对发送者的文件号做转换，在接收进程创建一个新的文件号与内核中的文件描述结构对应，然后替换 <code>flat_binder_object</code> 结构中的文件号传递给接收进程。</p>
+<p>通过 Binder 发送的文件与多个进程打开同一个文件的意义不同，通过 Binder 打开的文件共享 Linux 虚拟文件系统中的 <code>struct file</code>，<code>struct dentry</code>，<code>struct inode</code> 结构，当一个进程使用 <code>read()/write()/seek()</code> 改变文件指针，另一个进程的文件指针也会同时改变。</p>
+<h3 id="Binder-驱动层"><a href="#Binder-驱动层" class="headerlink" title="Binder 驱动层"></a>Binder 驱动层</h3><p>Binder 驱动式实现 Binder 进程间通信的核心，它记录了所有 Binder 实体以及每个实体在各个进程中的引用；它能够通过 Binder 引用查询对应的 Binder 实体；它为 Binder 实体创建以及查找对应引用，它记录 Binder 实体所在进程；管理 Binder 强/弱引用，创建/销毁 Binder 实体等。</p>
+<p>驱动中的第一个 Binder 是 ServiceManager，它用于管理实名 Binder 的 Binder 实体的注册，负责实名 Binder 注册过程中的进程间通信。驱动将所有进程中的 0 号 Binder 引用都指向 ServiceManager，那么索引进程将很方便的统一使用 0 号引用访问 ServiceManager，各个进程通过 <code>flat_binder_object</code> 结构穿过驱动进程进程间通信，Binder 驱动将会监听 <code>binder_transaction_data</code> 中的 <code>data.offset</code> 数组，所有 Binder 都在驱动的检查下传递，驱动通过 <code>type</code> 成员检查，如果为 <code>BINDER_TYPE_BINDER</code> 或 <code>BINDER_TYPE_WEAK_BINDRE</code> 则创建对应的 Binder 实体，如果为 <code>BINDER_TYPE_HANDLE</code>或 <code>BINDER_TYPE_WEAK_HANDLE</code> 则创建 Binder 引用，内核中的 Binder 实体和 Binder 引用将随着 Binder 通信过程逐渐增加，整个过程对用户透明。</p>
+<ul>
+<li>Binder 实体在驱动中的表述</li>
+</ul>
+<p>Binder 实体在驱动中以树的节点的形式存在，使用 <code>struct binder_node</code> 结构表示。</p>
+<table>
+<thead>
+<tr>
+<th>成员</th>
+<th>解释</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>int debug_id;</td>
+<td>用于调试</td>
+</tr>
+<tr>
+<td>struct binder_work work;</td>
+<td>当本节点的引用计数发生改变时，需要通知所属进程，通过该成员挂入所属进程的 to-do 队列里，唤醒所属进程执行 Binder 实体引用计数的修改。</td>
+</tr>
+<tr>
+<td>union {<br />struct rb_node rb_node;<br />struct hlist_node_dead_node;<br />}</td>
+<td>每个进程都维护一棵红黑树，以 <code>ptr</code> 成员为索引存放该进程所有的 Binder 实体，它是 Binder 实体在用户空间的指针，这样 Binder 驱动就可以根据 <code>ptr</code> 指针找到位于内核的 Binder 节点。<br /><code>rb_node</code> 用于将该节点链接到红黑树中，节点被销毁时需要将 <code>rb_node</code> 从树中移除，如果本节点引用还没有断开，就将节点使用 <code>dead_node</code> 记录到独立的链表中，直到通知所有进程切断与该节点的引用后，该节点才能被销毁。</td>
+</tr>
+<tr>
+<td>struct binder_proc *proc;</td>
+<td>本成员指向节点所属的进程，即提供该节点的进程。</td>
+</tr>
+<tr>
+<td>struct hlist_strong_refs;</td>
+<td>本成员是队列头，所有指向本节点的引用都链接在该队列里。这些引用可能隶属于不同的进程。通过该队列可以遍历指向该节点的所有引用。</td>
+</tr>
+<tr>
+<td>int internal_strong_refs;</td>
+<td>用以实现强指针的计数器：产生一个指向本节点的强引用该计数就会加 1。</td>
+</tr>
+<tr>
+<td>int local_weak_refs;</td>
+<td>驱动为传输中的 Binder 设置的弱引用计数。如果一个 Binder 通过数据包从一个进程发送到另一个进程，驱动会为该 Binder 增加引用计数，直到接收进程通过 <code>BC_FREE_BUFFER</code> 通知驱动释放该数据包的数据区为止。</td>
+</tr>
+<tr>
+<td>int local_strong_refs;</td>
+<td>驱动为传输中的 Binder 设置的强引用计数，同上。</td>
+</tr>
+<tr>
+<td>void __user *ptr;</td>
+<td>指向用户空间 Binder 实体的指针，来自于 <code>flat_binder_object</code> 的 Binder 成员。</td>
+</tr>
+<tr>
+<td>void __user *cookie;</td>
+<td>向用户空间的附加指针，来自于 <code>flat_binder_object</code> 的 <code>cookie</code> 成员。</td>
+</tr>
+<tr>
+<td>unsigned has_strong_ref;<br />unsigned pedning_strong_ref;<br />unsigned has_weak_ref;<br />unsigned pending_weak_ref;</td>
+<td>用于控制驱动与 Binder 实体所在进程交互式修改引用计数</td>
+</tr>
+<tr>
+<td>unsigned has_async_transaction;</td>
+<td>该成员表明该节点在 to-do 队列中有异步交互尚未完成。驱动将所有发送往接收端的数据包暂存在接收进程或线程开辟的 to-do 队列里。对于异步交互，驱动做了适当流控：如果 to-do 队列里有异步交互尚待处理则该成员置 1，这将导致新到的异步交互存放在本结构成员 – asynch_todo 队列中，而不直接送到 to-do 队列里。目的是为同步交互让路，避免长时间阻塞发送端。</td>
+</tr>
+<tr>
+<td>unsigned accept_fds;</td>
+<td>表明节点是否同意接受文件方式的 Binder，来自 <code>flat_binder_object</code> 中 <code>flags</code> 成员的 <code>FLAT_BINDER_FLAG_ACCEPTS_FDS</code> 位。由于接收文件 Binder 会为进程自动打开一个文件，占用有限的文件描述符，节点可以设置该位拒绝这种行为。</td>
+</tr>
+<tr>
+<td>int min_priority;</td>
+<td>设置处理 Binder 请求的线程的最低优先级。发送线程将数据提交给接收线程处理时，驱动会将发送线程的优先级也赋予接收线程，使得数据即使跨了进程也能以同样优先级得到处理。不过如果发送线程优先级过低，接收线程将以预设的最小值运行。</td>
+</tr>
+<tr>
+<td>struct list_head_async_todo;</td>
+<td>该域的值来自于 <code>flat_binder_object</code> 中 <code>flags</code> 成员。异步交互等待队列；用于分流发往本节点的异步交互包。</td>
+</tr>
+</tbody></table>
+<ul>
+<li>Binder 引用在驱动中的表述</li>
+</ul>
+<p>Binder 引用使用 <code>binder_ref</code> 结构表示。</p>
+<table>
+<thead>
+<tr>
+<th>成员</th>
+<th>含义</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>int debug_id</td>
+<td>用于调试</td>
+</tr>
+<tr>
+<td>struct rb_node rb_node_desc;</td>
+<td>每个进程有一棵红黑树，进程所有引用以引用号（即本结构的 <code>desc</code> 成员）为索引添入该树中。本成员用做链接到该树的一个节点。</td>
+</tr>
+<tr>
+<td>struct rb_node rb_node_node;</td>
+<td>每个进程又有一棵红黑树，进程所有引用以节点实体在驱动中的内存地址（即本结构的 <code>node</code> 成员）为所引添入该树中。本成员用做链接到该树的一个节点。</td>
+</tr>
+<tr>
+<td>struct hlist_node node_entry;</td>
+<td>将本引用做为节点链入所指向的 Binder 实体结构 <code>binder_node</code> 中的 <code>refs</code> 队列。</td>
+</tr>
+<tr>
+<td>struct binder_proc *proc;</td>
+<td>本引用所属的进程。</td>
+</tr>
+<tr>
+<td>struct binder_node *node;</td>
+<td>本引用所指向的 Binder 实体节点。</td>
+</tr>
+<tr>
+<td>uint32_t desc;</td>
+<td>本结构的引用号</td>
+</tr>
+<tr>
+<td>int strong;</td>
+<td>强引用计数</td>
+</tr>
+<tr>
+<td>int weak;</td>
+<td>弱引用计数</td>
+</tr>
+<tr>
+<td>struct binder_ref_death *death;</td>
+<td>应用程序向驱动发送 <code>BC_REQUEST_DEATH_NOTIFICATION</code> 或 <code>BC_CLEAR_DEATH_NOTIFICATION</code> 命令从而当 Binder 实体销毁时能够收到来自驱动的提醒。该成员不为空表明用户订阅了对应实体销毁的“讣告”。</td>
+</tr>
+</tbody></table>
+<p>同一个 Binder 实体可能存在多个 Binder 引用，而这些引用分布在不同的进程中，和实体一样，每个进程维护一颗红黑树存放 Binder 引用，Binder 引用可通过两个键索引：</p>
+<ol>
+<li>对应 Binder 实体在内核中的地址。它是内核中 <code>binder_node</code> 结构的地址，它的地址在内核中具有唯一性，Binder 实体在不同用户进程地址可能重合，所以不能用来做索引，Binder 驱动利用红黑树在进程中快速查找 Binder 实体对应的引用（一个实体在进程中之间里一个引用）。</li>
+<li>引用号。它是驱动为 Binder 引用分配的一个 32 位标识，在一个进程中具有唯一性，多个进程中引用号可能相同，引用号可做为 Binder 引用在用户进程的句柄，由驱动动态分配，0 号为特殊引用号，固定指向 ServiceManager。当向 Binder 发送数据包时，应用程序将 Binder 引用号填入 <code>binder_transaction_data</code> 结构中的 <code>target.handle</code> 成员中，表明该数据包的目的 Binder，驱动根据引用号在红黑树中找到对应的 <code>binder_ref</code> 结构，然后可通过其 <code>node</code> 成员获取对应的 Binder 实体所在的进程及相关信息，实现数据包的发送。</li>
+</ol>
+<h2 id="Binder-驱动实现"><a href="#Binder-驱动实现" class="headerlink" title="Binder 驱动实现"></a>Binder 驱动实现</h2><h3 id="Binder-内存映射和接收缓存区实现"><a href="#Binder-内存映射和接收缓存区实现" class="headerlink" title="Binder 内存映射和接收缓存区实现"></a>Binder 内存映射和接收缓存区实现</h3><ul>
+<li>传统的 IPC 通信方式</li>
+</ul>
+<p>在传统的 IPC 通信中，通常发送方发送数据时，首先将数据放入缓存区，然后通过 <code>system call</code> 陷入内核，内核服务在内核分配内存，将发送方数据拷贝到内核缓冲区，同时接收方需要分配同样的缓存区，然后内核将数据从内核缓存区拷贝到接收方并唤醒接收线程，完成数据的发送，这种方式具有两个缺陷：</p>
+<ol>
+<li>效率低下，需要两次数据复制过程，Linux 通过 <code>copy_from_user()/copy_to_user()</code> 实现跨内核复制数据，如果此过程中使用了高端内存，需要临时建立和取消页映射，会造成性能损失。</li>
+<li>接收方需要提供数据缓存，而缓存大小未知，只能尽量开辟足够的空间，或者提前调用 API 获取大小，两种方式都会造成时间或空间的浪费。</li>
+</ol>
+<ul>
+<li>Binder IPC 实现</li>
+</ul>
+<p>Binder 采用与通常 IPC 方式不同的内存管理策略，Binder 驱动负责数据接收缓存的管理，它实现了 <code>mmap()</code> 系统调用，<code>mmap()</code> 通常用于具有物理介质的文件系统上，而 Binder 驱动做为字符设备支持 <code>mmap()</code> 并不是为了在物理介质和用户空间做映射，而是用来创建用于接收数据的缓存空间。</p>
+<p>创建接收缓存区的方法如下：</p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">fd = <span class="built_in">open</span>(<span class="string">"/dev/binder"</span>, O_RDWR); <span class="comment">// 打开 Binder 驱动。</span></span><br><span class="line">mmap(<span class="literal">NULL</span>, MAP_SIZE, PROT_READ, MAP_PRIVATE, fd, <span class="number">0</span>);</span><br></pre></td></tr></table></figure>
+
+<p>以上操作为接受方创建了一片大小为 <code>MAP_SIZE</code> 的接收缓存区，<code>mmap()</code> 返回内存映射在用户空间的地址，这段空间由驱动管理，用户不能直接访问（类型为 <code>PROT_READ</code> 只读映射）。</p>
+<h3 id="Binder-接收线程实现"><a href="#Binder-接收线程实现" class="headerlink" title="Binder 接收线程实现"></a>Binder 接收线程实现</h3><p>Binder 通信的最终形态其实是不同进程中的线程之间的通信，Client 端中的线程 1 通过 Binder 引用向 Server 端发送请求，Server 将启动线程 2 来处理 Client 端的请求，此时 Client 端中的线程 1 将等待回应，Server 端的线程 2 处理完毕返回结果，然后 Client 端中的线程 1 被唤醒并接收数据，在此过程中，Server 端中的线程 2 仿佛 Client 端线程 1 的影子，这个影子穿越进程执行任务后再回到线程 1 中，就像同一个线程执行一个任务一样，驱动会帮助此行为，为线程 2 设置与线程 1 相同的线程优先级，为了使 Server 端线程 2 的执行时间接近 Client 端线程 1 的执行时间，减小环境之间的差异。不过除了线程优先级类似，两个线程从的身份，打开的文件，栈大小，私有数据等并无相同之处。</p>
+<ul>
+<li>Binder 线程池管理</li>
+</ul>
+<p>考虑多个 Client 端同时向一个 Server 端发起请求的情况，对于 Socket 处理方式而言，每当它监听到 Client 端的请求后，它就会对每一个 Client 启动一个线程来单独处理 Client 端发出的请求。对于 Binder 来说则不是这样。</p>
+<p>Binder 会提前创建好若干线程，同时每个线程使用 <code>BINDER_WRITE_READ</code> 命令读取 Binder 请求，此时这些线程将处于阻塞状态，并存放于队列中，当有 Client 端请求时，Binder 驱动将从队列中唤醒一个线程用于处理 Client 请求，由于需要提前创建一定数量的线程，为避免浪费资源，Binder 协议提供了如下命令控制线程池：</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line">BINDER_SET_MAX_THREADS</span><br><span class="line">BC_REGISTER_LOOP</span><br><span class="line">BC_ENTER_LOOP</span><br><span class="line">BC_EXIT_LOOP</span><br><span class="line">BC_SPAWN_LOOPER</span><br></pre></td></tr></table></figure>
+
+<p>应用程序 Client 端通过 <code>BINDER_SET_MAX_THREADS</code> 通知 Binder 驱动最多可以创建线程的数量，在每个线程创建，进入循环，退出循环时会调用 <code>BC_REGISTER_LOOP</code> <code>BC_ENTER_LOOP</code> <code>BC_EXIT_LOOP</code> 通知 Binder 驱动，驱动会收集线程相关信息，在每次驱动接收到 Client 端数据包并后返回给线程时，都会检查十是否还有闲置线程，如果没有了，则 Binder 驱动会在数据包中附加 <code>BC_SPAWN_LOOPER</code> 命令通知 Client 端，线程将不足以响应请求，希望能够再创建若干线程。这样就构成一个持续的处理和响应的过程。</p>
+<ul>
+<li>线程启动优化</li>
+</ul>
+<p>当 Client 端进程中的线程 1 向 Server 端进程发送请求时，Binder 驱动会首先查看线程 1 是否也在等待处理 Server 端进程的某个线程的响应（两个进程间互相发送消息时），如果 Server 端存在一个这样个线程 2，那么驱动将要求线程 2 来处理这个请求，因为可以确定的是线程 1 在等待线程 2 的响应，线程 2 也阻塞在读取返回包的过程，这样可以有效利用线程资源，避免线程 2 的空闲，同时避免了创建额外的线程。</p>
+<h3 id="数据包接收队列与（线程）等待队列实现"><a href="#数据包接收队列与（线程）等待队列实现" class="headerlink" title="数据包接收队列与（线程）等待队列实现"></a>数据包接收队列与（线程）等待队列实现</h3><p>数据接收端通常存在两个队列，数据包接收队列和线程等待队列，数据包接收队列负责接收数据包并缓存，之后会分发给线程处理，而线程等待队列则为等待处理请求的线程，在 Binder 驱动中，每个进程都具有一个全局接收队列，称为 to-do 队列，负责存放不是发往特定线程的数据包，相应的有一个全局等待队列，等待处理全局接受队列中的数据包，同时每个线程有自己私有的 to-do 队列，存放发送给自己的数据包，对应的私有等待队列用于接收私有 to-do 队列中的数据包，其中只有一个线程，就是这个线程自身。</p>
+<ul>
+<li>数据包接收规则</li>
+</ul>
+<p>Binder 驱动将根据以下规则确定数据包存放在全局或私有队列中：</p>
+<ol>
+<li>Client 端发送至 Server 端的数据包全部提交到进程全局的 to-do 队列，除了前面线程启动优化中的情况，Client 端的线程 1 发送的数据包将存放在满足条件的 Server 端的线程 2 的私有 to-do 队列中。</li>
+<li>对于同步请求的返回数据包，都放入发起请求的线程的私有 to-do 队列中。</li>
+</ol>
+<p>根据以上规则得到了线程进入全局等待队列的规则，即如果一个线程不接收返回数据包则应该在等待队列中等待接收新任务，否则就应该在其私有的队列中等待 Server 端的返回数据包。</p>
+<p>驱动为 Binder 通信所加的这些规则，在应用程序的同步交互中体现出了线程一致性原则：</p>
+<ol>
+<li>Client 端发送数据包的线程必须和等待返回包的线程是同一个，否则将无法接收到返回包。</li>
+<li>Server 端发送返回包的线程必须和接收到请求的线程是同一个，否则将数据包返回至请求的线程。（返回数据包的 Binder 由驱动记录在接收请求数据包的线程中，所以发送数据包的线程也需要是它）</li>
+</ol>
+<ul>
+<li>同步异步交互</li>
+</ul>
+<p>在 Binder 通信中，同步交互和异步交互的区别在于，同步交互时 Client 端需要等待 Server 端的响应数据包，而异步交互则由于没有返回数据需要接收，所以 Client 端发出请求后可立即结束。Binder 驱动对于两种交互的处理并不是把它们直接加入对应的 to-do 队列中，而是定义了异步为同步请求让步的策略：</p>
+<p>对于 Binder 实体，如果存在一个异步交互未被线程处理完时，那么后来的发送给该 Binder 实体的异步请求将不再加入 to-do 队列中，而是阻塞在 Binder 驱动为该 Binder 实体开辟的异步交互队列中（Binder 节点的 <code>async_node</code> 成员中），在此期间同步交互依旧不受限制直接进入 to-do 队列接受处理，直到该异步交互处理完毕，下一个异步交互方可以脱离异步交互队列进入 to-do 队列中。这样做是因为同步交互的请求端需要等待返回包，必须迅速处理完毕以免影响请求端的响应速度，而异步交互属于‘发射后不管“，即使延时一些不会阻塞其它线程，所以使用专用队列将过多的异步交互暂存起来，避免突发大量异步交互挤占 Server 端的处理能力或耗尽线程池里的线程，进而阻塞同步交互。</p>
+<h2 id="结语"><a href="#结语" class="headerlink" title="结语"></a>结语</h2><p>以上”Binder 设计“部分是阅读博客所做的记录，由于可能出现理解偏差，所以里面可能会存在错误的论述，需要我在后期学习过程中去确认修正。</p>
+</div><div class="article-tags size-small mb-4"><span class="mr-2">#</span><a class="link-muted mr-2" rel="tag" href="/tags/android/">Android</a><a class="link-muted mr-2" rel="tag" href="/tags/binder/">Binder</a></div><div class="addthis_inline_share_toolbox"></div><script src="//s7.addthis.com/js/300/addthis_widget.js#pubid=ra-5f0f12c19a2af379" defer></script></article></div><div class="card"><div class="card-content"><h3 class="menu-label has-text-centered">喜欢这篇文章？打赏一下作者吧</h3><div class="buttons is-centered"><a class="button is-info donate"><span class="icon is-small"><i class="fab fa-alipay"></i></span><span>支付宝</span><span class="qrcode"><img src="/img/qrcode/alipay.jpg" alt="支付宝"></span></a><a class="button is-success donate"><span class="icon is-small"><i class="fab fa-weixin"></i></span><span>微信</span><span class="qrcode"><img src="/img/qrcode/wxpay.jpg" alt="微信"></span></a></div></div></div><nav class="post-navigation mt-4 level is-mobile"><div class="level-end"><a class="article-nav-next level level-item link-muted" href="/2020/07/14/android-jni-%E6%8C%87%E5%8D%97/"><span class="level-item">Android JNI 指南</span><i class="level-item fas fa-chevron-right"></i></a></div></nav><div class="card"><div class="card-content"><h3 class="title is-5">评论</h3><script src="https://utteranc.es/client.js" repo="l0neman/l0neman.github.io" issue-term="pathname" label="comment" theme="github-light" crossorigin="anonymous" async></script></div></div></div><!--!--><div class="column column-right  order-3 is-sticky"><div class="card widget" id="toc"><div class="card-content"><div class="menu" style="max-height: 480px; overflow: auto;"><h3 class="menu-label">目录</h3><ul class="menu-list"><li><a class="is-flex" href="#前言"><span class="mr-2">1</span><span>前言</span></a></li><li><a class="is-flex" href="#Binder-的优势"><span class="mr-2">2</span><span>Binder 的优势</span></a><ul class="menu-list"><li><a class="is-flex" href="#简介"><span class="mr-2">2.1</span><span>简介</span></a></li><li><a class="is-flex" href="#Linux-IPC"><span class="mr-2">2.2</span><span>Linux IPC</span></a></li><li><a class="is-flex" href="#IPC-对比"><span class="mr-2">2.3</span><span>IPC 对比</span></a></li><li><a class="is-flex" href="#Binder-特点"><span class="mr-2">2.4</span><span>Binder 特点</span></a></li><li><a class="is-flex" href="#总结"><span class="mr-2">2.5</span><span>总结</span></a></li></ul></li><li><a class="is-flex" href="#Binder-通信模型"><span class="mr-2">3</span><span>Binder 通信模型</span></a><ul class="menu-list"><li><a class="is-flex" href="#Binder-驱动"><span class="mr-2">3.1</span><span>Binder 驱动</span></a></li><li><a class="is-flex" href="#ServiceManager-和-Server"><span class="mr-2">3.2</span><span>ServiceManager 和 Server</span></a></li><li><a class="is-flex" href="#Client"><span class="mr-2">3.3</span><span>Client</span></a></li><li><a class="is-flex" href="#Binder"><span class="mr-2">3.4</span><span>Binder</span></a></li></ul></li><li><a class="is-flex" href="#Binder-协议"><span class="mr-2">4</span><span>Binder 协议</span></a><ul class="menu-list"><li><a class="is-flex" href="#ioctl"><span class="mr-2">4.1</span><span>ioctl</span></a></li><li><a class="is-flex" href="#BINDER-WRITE-READ-写入"><span class="mr-2">4.2</span><span>BINDER_WRITE_READ 写入</span></a></li><li><a class="is-flex" href="#BINDER-WRITE-READ-读取"><span class="mr-2">4.3</span><span>BINDER_WRITE_READ 读取</span></a></li><li><a class="is-flex" href="#binder-transaction-data-结构"><span class="mr-2">4.4</span><span>binder_transaction_data 结构</span></a></li></ul></li><li><a class="is-flex" href="#Binder-层次概述"><span class="mr-2">5</span><span>Binder 层次概述</span></a><ul class="menu-list"><li><a class="is-flex" href="#Binder-应用层"><span class="mr-2">5.1</span><span>Binder 应用层</span></a></li><li><a class="is-flex" href="#Binder-Server-端"><span class="mr-2">5.2</span><span>Binder Server 端</span></a></li><li><a class="is-flex" href="#Binder-Client-端"><span class="mr-2">5.3</span><span>Binder Client 端</span></a></li><li><a class="is-flex" href="#Binder-传输结构"><span class="mr-2">5.4</span><span>Binder 传输结构</span></a></li><li><a class="is-flex" href="#Binder-驱动层"><span class="mr-2">5.5</span><span>Binder 驱动层</span></a></li></ul></li><li><a class="is-flex" href="#Binder-驱动实现"><span class="mr-2">6</span><span>Binder 驱动实现</span></a><ul class="menu-list"><li><a class="is-flex" href="#Binder-内存映射和接收缓存区实现"><span class="mr-2">6.1</span><span>Binder 内存映射和接收缓存区实现</span></a></li><li><a class="is-flex" href="#Binder-接收线程实现"><span class="mr-2">6.2</span><span>Binder 接收线程实现</span></a></li><li><a class="is-flex" href="#数据包接收队列与（线程）等待队列实现"><span class="mr-2">6.3</span><span>数据包接收队列与（线程）等待队列实现</span></a></li></ul></li><li><a class="is-flex" href="#结语"><span class="mr-2">7</span><span>结语</span></a></li></ul></div></div></div><div class="card widget"><div class="card-content"><div class="menu"><h3 class="menu-label">分类</h3><ul class="menu-list"><li><a class="level is-mobile is-marginless" href="/categories/android-%E5%BA%94%E7%94%A8%E5%BC%80%E5%8F%91/"><span class="level-start"><span class="level-item">Android 应用开发</span></span><span class="level-end"><span class="level-item tag">3</span></span></a></li><li><a class="level is-mobile is-marginless" href="/categories/android-%E7%B3%BB%E7%BB%9F%E5%8E%9F%E7%90%86/"><span class="level-start"><span class="level-item">Android 系统原理</span></span><span class="level-end"><span class="level-item tag">1</span></span></a></li></ul></div></div></div><div class="card widget"><div class="card-content"><h3 class="menu-label">最新文章</h3><article class="media"><div class="media-content size-small"><p><time dateTime="2020-07-14T15:32:18.000Z">2020-07-14</time></p><p class="title is-6"><a class="link-muted" href="/2020/07/14/android-binder-%E8%AE%BE%E8%AE%A1%E5%88%86%E6%9E%90/">Android Binder 设计分析</a></p><p class="is-uppercase"><a class="link-muted" href="/categories/android-%E7%B3%BB%E7%BB%9F%E5%8E%9F%E7%90%86/">Android 系统原理</a></p></div></article><article class="media"><div class="media-content size-small"><p><time dateTime="2020-07-14T15:27:23.000Z">2020-07-14</time></p><p class="title is-6"><a class="link-muted" href="/2020/07/14/android-jni-%E6%8C%87%E5%8D%97/">Android JNI 指南</a></p><p class="is-uppercase"><a class="link-muted" href="/categories/android-%E5%BA%94%E7%94%A8%E5%BC%80%E5%8F%91/">Android 应用开发</a></p></div></article><article class="media"><div class="media-content size-small"><p><time dateTime="2020-07-14T15:20:17.000Z">2020-07-14</time></p><p class="title is-6"><a class="link-muted" href="/2020/07/14/android-ndk-%E6%8C%87%E5%8D%97/">Android NDK 指南</a></p><p class="is-uppercase"><a class="link-muted" href="/categories/android-%E5%BA%94%E7%94%A8%E5%BC%80%E5%8F%91/">Android 应用开发</a></p></div></article><article class="media"><div class="media-content size-small"><p><time dateTime="2020-07-14T15:06:51.000Z">2020-07-14</time></p><p class="title is-6"><a class="link-muted" href="/2020/07/14/makefile-%E6%8C%87%E5%8D%97/">Makefile 指南</a></p><p class="is-uppercase"><a class="link-muted" href="/categories/android-%E5%BA%94%E7%94%A8%E5%BC%80%E5%8F%91/">Android 应用开发</a></p></div></article></div></div><div class="card widget"><div class="card-content"><div class="menu"><h3 class="menu-label">归档</h3><ul class="menu-list"><li><a class="level is-mobile is-marginless" href="/archives/2020/07/"><span class="level-start"><span class="level-item">七月 2020</span></span><span class="level-end"><span class="level-item tag">4</span></span></a></li></ul></div></div></div><div class="card widget"><div class="card-content"><div class="menu"><h3 class="menu-label">标签</h3><div class="field is-grouped is-grouped-multiline"><div class="control"><a class="tags has-addons" href="/tags/android/"><span class="tag">Android</span><span class="tag is-grey-lightest">3</span></a></div><div class="control"><a class="tags has-addons" href="/tags/binder/"><span class="tag">Binder</span><span class="tag is-grey-lightest">1</span></a></div><div class="control"><a class="tags has-addons" href="/tags/jni/"><span class="tag">JNI</span><span class="tag is-grey-lightest">2</span></a></div><div class="control"><a class="tags has-addons" href="/tags/make/"><span class="tag">Make</span><span class="tag is-grey-lightest">1</span></a></div><div class="control"><a class="tags has-addons" href="/tags/makefile/"><span class="tag">Makefile</span><span class="tag is-grey-lightest">1</span></a></div><div class="control"><a class="tags has-addons" href="/tags/ndk/"><span class="tag">NDK</span><span class="tag is-grey-lightest">3</span></a></div></div></div></div></div></div></div></div></section><footer class="footer"><div class="container"><div class="level"><div class="level-start"><a class="footer-logo is-block mb-2" href="/"><img src="/img/logo.png" alt="l0neman 的博客" height="28"></a><p class="size-small"><span>&copy; 2020 l0neman</span>  Powered by <a href="https://hexo.io/" target="_blank" rel="noopener">Hexo</a> &amp; <a href="https://github.com/ppoffice/hexo-theme-icarus" target="_blank" rel="noopener">Icarus</a><br><span id="busuanzi_container_site_uv">共<span id="busuanzi_value_site_uv">0</span>个访客</span></p></div><div class="level-end"><div class="field has-addons"><p class="control"><a class="button is-transparent is-large" target="_blank" rel="noopener" title="Creative Commons" href="https://creativecommons.org/"><i class="fab fa-creative-commons"></i></a></p><p class="control"><a class="button is-transparent is-large" target="_blank" rel="noopener" title="Attribution 4.0 International" href="https://creativecommons.org/licenses/by/4.0/"><i class="fab fa-creative-commons-by"></i></a></p><p class="control"><a class="button is-transparent is-large" target="_blank" rel="noopener" title="Download on GitHub" href="https://github.com/l0neman"><i class="fab fa-github"></i></a></p></div></div></div></div></footer><script src="https://cdn.jsdelivr.net/npm/jquery@3.3.1/dist/jquery.min.js"></script><script src="https://cdn.jsdelivr.net/npm/moment@2.22.2/min/moment-with-locales.min.js"></script><script>moment.locale("zh-CN");</script><script>var IcarusThemeSettings = {
+            site: {
+                url: 'https://l0neman.github.io',
+                external_link: {"enable":true,"exclude":[]}
+            },
+            article: {
+                highlight: {
+                    clipboard: true,
+                    fold: 'unfolded'
+                }
+            }
+        };</script><script src="https://cdn.jsdelivr.net/npm/clipboard@2.0.4/dist/clipboard.min.js" defer></script><script src="/js/animation.js"></script><a id="back-to-top" title="回到顶端" href="javascript:;"><i class="fas fa-chevron-up"></i></a><script src="/js/back_to_top.js" defer></script><!--!--><!--!--><!--!--><script src="https://cdn.jsdelivr.net/npm/lightgallery@1.6.8/dist/js/lightgallery.min.js" defer></script><script src="https://cdn.jsdelivr.net/npm/justifiedGallery@3.7.0/dist/js/jquery.justifiedGallery.min.js" defer></script><script>window.addEventListener("load", () => {
+            if (typeof $.fn.lightGallery === 'function') {
+                $('.article').lightGallery({ selector: '.gallery-item' });
+            }
+            if (typeof $.fn.justifiedGallery === 'function') {
+                if ($('.justified-gallery > p > .gallery-item').length) {
+                    $('.justified-gallery > p > .gallery-item').unwrap();
+                }
+                $('.justified-gallery').justifiedGallery();
+            }
+        });</script><!--!--><!--!--><!--!--><script src="/js/main.js" defer></script><div class="searchbox"><div class="searchbox-container"><div class="searchbox-header"><div class="searchbox-input-container"><input class="searchbox-input" type="text" placeholder="想要查找什么..."></div><a class="searchbox-close" href="javascript:;">×</a></div><div class="searchbox-body"></div></div></div><script src="/js/insight.js" defer></script><script>document.addEventListener('DOMContentLoaded', function () {
+            loadInsight({"contentUrl":"/content.json"}, {"hint":"想要查找什么...","untitled":"(无标题)","posts":"文章","pages":"页面","categories":"分类","tags":"标签"});
+        });</script></body></html>
