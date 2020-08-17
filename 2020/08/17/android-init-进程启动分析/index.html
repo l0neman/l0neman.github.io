@@ -16,7 +16,7 @@
 <li>初始化内核 log（<code>/dev/kmsg</code>）；</li>
 <li>加载系统属性，提供属性设置服务，根据属性值变化做出响应（触发 .rc 文件中命令或启停止服务）；</li>
 <li>解析并执行 init.rc 文件，根据其内容描述启动相应服务，初始化相应设备节点；</li>
-<li>负责子进程的善后工作，清理子进程，防止其成为僵尸进程，或者根据属性重启进程。</li>
+<li>负责子进程的善后工作，清理子进程，防止其成为僵尸进程，或者根据配置重启进程。</li>
 </ol>
 <p>参考相关资料，对 Android 6.0.1 系统中 init 进程启动关键流程进行分析。</p>
 <h1 id="init-进程入口"><a href="#init-进程入口" class="headerlink" title="init 进程入口"></a>init 进程入口</h1><p>/init 可执行文件的对应代码在 /system/core/init/init.cpp 中，入口为 <code>main</code> 函数。</p>
