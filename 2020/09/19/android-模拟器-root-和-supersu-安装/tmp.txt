@@ -1,0 +1,28 @@
+~/Android/Sdk/emulator/emulator -avd suavd -system ../suavd./system.img -writable-system
+
+adb root
+
+adb remount
+
+chmod 06755 /system/xbin/su
+
+su --install
+
+su --daemon&
+
+setenforce 0
+
+设置快照，snapshots
+
+https://www.cnblogs.com/cute/p/4095359.html
+
+https://stackoverflow.com/questions/5095234/how-to-get-root-access-on-android-emulator
+
+http://www.imooc.com/wenda/detail/586733
+
+~/Android/Sdk/emulator/emulator -avd suavd -writable-system
+
+--------
+
+adb root:
+adbd cannot run as root in production builds
