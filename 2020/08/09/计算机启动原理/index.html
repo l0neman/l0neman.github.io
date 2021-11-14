@@ -1,0 +1,266 @@
+<!doctype html>
+<html lang="zh"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1"><meta><title>计算机启动原理 - l0neman 的博客</title><link rel="manifest" href="/manifest.json"><meta name="application-name" content="l0neman 的博客"><meta name="msapplication-TileImage" content="/img/avatar.png"><meta name="apple-mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-title" content="l0neman 的博客"><meta name="apple-mobile-web-app-status-bar-style" content="default"><meta name="description" content="启动流程概述 开机加电； CPU 跳转到 BIOS 指令的的物理地址（在 Intel 平台为 0XFFFF0）； BIOS 执行 POST（Power-On Self Test，硬件自检）； 找到可启动的设备； 从 MBR 加载引导扇区； BIOS 将控制权移交给操作系统的 Boot Loader（引导加载程序）。"><meta property="og:type" content="blog"><meta property="og:title" content="计算机启动原理"><meta property="og:url" content="https://l0neman.github.io/2020/08/09/%E8%AE%A1%E7%AE%97%E6%9C%BA%E5%90%AF%E5%8A%A8%E5%8E%9F%E7%90%86/"><meta property="og:site_name" content="l0neman 的博客"><meta property="og:description" content="启动流程概述 开机加电； CPU 跳转到 BIOS 指令的的物理地址（在 Intel 平台为 0XFFFF0）； BIOS 执行 POST（Power-On Self Test，硬件自检）； 找到可启动的设备； 从 MBR 加载引导扇区； BIOS 将控制权移交给操作系统的 Boot Loader（引导加载程序）。"><meta property="og:locale" content="zh_CN"><meta property="og:image" content="https://l0neman.github.io/2020/08/09/%E8%AE%A1%E7%AE%97%E6%9C%BA%E5%90%AF%E5%8A%A8%E5%8E%9F%E7%90%86/efi_flowchart_extended.jpg"><meta property="og:image" content="https://l0neman.github.io/2020/08/09/%E8%AE%A1%E7%AE%97%E6%9C%BA%E5%90%AF%E5%8A%A8%E5%8E%9F%E7%90%86/mbr_strcut.png"><meta property="og:image" content="https://l0neman.github.io/2020/08/09/%E8%AE%A1%E7%AE%97%E6%9C%BA%E5%90%AF%E5%8A%A8%E5%8E%9F%E7%90%86/disk_struct.png"><meta property="og:image" content="https://l0neman.github.io/2020/08/09/%E8%AE%A1%E7%AE%97%E6%9C%BA%E5%90%AF%E5%8A%A8%E5%8E%9F%E7%90%86/bootloader_boot.png"><meta property="og:image" content="https://l0neman.github.io/2020/08/09/%E8%AE%A1%E7%AE%97%E6%9C%BA%E5%90%AF%E5%8A%A8%E5%8E%9F%E7%90%86/boot_flow.png"><meta property="og:image" content="https://l0neman.github.io/2020/08/09/%E8%AE%A1%E7%AE%97%E6%9C%BA%E5%90%AF%E5%8A%A8%E5%8E%9F%E7%90%86/android_boot.png"><meta property="article:published_time" content="2020-08-09T14:30:31.000Z"><meta property="article:modified_time" content="2020-08-09T14:30:31.000Z"><meta property="article:author" content="l0neman"><meta property="article:tag" content="Computer"><meta property="twitter:card" content="summary"><meta property="twitter:image" content="./efi_flowchart_extended.jpg"><script type="application/ld+json">{"@context":"https://schema.org","@type":"BlogPosting","mainEntityOfPage":{"@type":"WebPage","@id":"https://l0neman.github.io/2020/08/09/%E8%AE%A1%E7%AE%97%E6%9C%BA%E5%90%AF%E5%8A%A8%E5%8E%9F%E7%90%86/"},"headline":"计算机启动原理","image":["https://l0neman.github.io/2020/08/09/%E8%AE%A1%E7%AE%97%E6%9C%BA%E5%90%AF%E5%8A%A8%E5%8E%9F%E7%90%86/efi_flowchart_extended.jpg","https://l0neman.github.io/2020/08/09/%E8%AE%A1%E7%AE%97%E6%9C%BA%E5%90%AF%E5%8A%A8%E5%8E%9F%E7%90%86/mbr_strcut.png","https://l0neman.github.io/2020/08/09/%E8%AE%A1%E7%AE%97%E6%9C%BA%E5%90%AF%E5%8A%A8%E5%8E%9F%E7%90%86/disk_struct.png","https://l0neman.github.io/2020/08/09/%E8%AE%A1%E7%AE%97%E6%9C%BA%E5%90%AF%E5%8A%A8%E5%8E%9F%E7%90%86/bootloader_boot.png","https://l0neman.github.io/2020/08/09/%E8%AE%A1%E7%AE%97%E6%9C%BA%E5%90%AF%E5%8A%A8%E5%8E%9F%E7%90%86/boot_flow.png","https://l0neman.github.io/2020/08/09/%E8%AE%A1%E7%AE%97%E6%9C%BA%E5%90%AF%E5%8A%A8%E5%8E%9F%E7%90%86/android_boot.png"],"datePublished":"2020-08-09T14:30:31.000Z","dateModified":"2020-08-09T14:30:31.000Z","author":{"@type":"Person","name":"l0neman"},"publisher":{"@type":"Organization","name":"l0neman 的博客","logo":{"@type":"ImageObject","url":"https://l0neman.github.io/img/logo.png"}},"description":"启动流程概述 开机加电； CPU 跳转到 BIOS 指令的的物理地址（在 Intel 平台为 0XFFFF0）； BIOS 执行 POST（Power-On Self Test，硬件自检）； 找到可启动的设备； 从 MBR 加载引导扇区； BIOS 将控制权移交给操作系统的 Boot Loader（引导加载程序）。"}</script><link rel="canonical" href="https://l0neman.github.io/2020/08/09/%E8%AE%A1%E7%AE%97%E6%9C%BA%E5%90%AF%E5%8A%A8%E5%8E%9F%E7%90%86/"><link rel="icon" href="/img/avatar.png"><link rel="stylesheet" href="https://cdnjs.loli.net/ajax/libs/font-awesome/5.15.2/css/all.min.css"><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/highlight.js@9.12.0/styles/atom-one-light.css"><link rel="stylesheet" href="https://fonts.loli.net/css2?family=Ubuntu:wght@400;600&amp;family=Source+Code+Pro"><link rel="stylesheet" href="/css/default.css"><style>body>.footer,body>.navbar,body>.section{opacity:0}</style><!--!--><script>var _hmt = _hmt || [];
+        (function() {
+            var hm = document.createElement("script");
+            hm.src = "//hm.baidu.com/hm.js?1727d76e0a823184efc8776f32a916a9";
+            var s = document.getElementsByTagName("script")[0];
+            s.parentNode.insertBefore(hm, s);
+        })();</script><script src="//busuanzi.ibruce.info/busuanzi/2.3/busuanzi.pure.mini.js" defer></script><!--!--><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/cookieconsent@3.1.1/build/cookieconsent.min.css"><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/lightgallery@1.6.8/dist/css/lightgallery.min.css"><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/justifiedGallery@3.7.0/dist/css/justifiedGallery.min.css"><!--!--><!--!--><script src="https://cdn.jsdelivr.net/npm/pace-js@1.0.2/pace.min.js"></script><!--!--><!--!--><meta name="generator" content="Hexo 5.4.0"></head><body class="is-2-column"><nav class="navbar navbar-main"><div class="container"><div class="navbar-brand justify-content-center"><a class="navbar-item navbar-logo" href="/"><img src="/img/logo.png" alt="l0neman 的博客" height="28"></a></div><div class="navbar-menu"><div class="navbar-start"><a class="navbar-item" href="/">主页</a><a class="navbar-item" href="/archives">归档</a><a class="navbar-item" href="/categories">分类</a><a class="navbar-item" href="/tags">标签</a><a class="navbar-item" href="/about">关于</a></div><div class="navbar-end"><a class="navbar-item" target="_blank" rel="noopener" title="Download on GitHub" href="https://github.com/l0neman"><i class="fab fa-github"></i></a><a class="navbar-item is-hidden-tablet catalogue" title="目录" href="javascript:;"><i class="fas fa-list-ul"></i></a><a class="navbar-item search" title="搜索" href="javascript:;"><i class="fas fa-search"></i></a></div></div></div></nav><section class="section"><div class="container"><div class="columns"><div class="column order-2 column-main is-three-quarters"><div class="card"><article class="card-content article" role="article"><div class="article-meta is-size-7 is-uppercase level is-mobile"><div class="level-left"><span class="level-item"><time dateTime="2020-08-09T14:30:31.000Z" title="2020/8/9 下午10:30:31">2020-08-09</time>发表</span><span class="level-item"><time dateTime="2020-08-09T14:30:31.000Z" title="2020/8/9 下午10:30:31">2020-08-09</time>更新</span><span class="level-item"><a class="link-muted" href="/categories/%E7%BC%96%E7%A8%8B%E5%9F%BA%E7%A1%80/">编程基础</a></span><span class="level-item">25 分钟读完 (大约3716个字)</span><span class="level-item" id="busuanzi_container_page_pv"><span id="busuanzi_value_page_pv">0</span>次访问</span></div></div><h1 class="title is-3 is-size-4-mobile">计算机启动原理</h1><div class="content"><h2 id="启动流程概述"><a href="#启动流程概述" class="headerlink" title="启动流程概述"></a>启动流程概述</h2><ol>
+<li>开机加电；</li>
+<li>CPU 跳转到 BIOS 指令的的物理地址（在 Intel 平台为 0XFFFF0）；</li>
+<li>BIOS 执行 POST（Power-On Self Test，硬件自检）；</li>
+<li>找到可启动的设备；</li>
+<li>从 MBR 加载引导扇区；</li>
+<li>BIOS 将控制权移交给操作系统的 Boot Loader（引导加载程序）。<span id="more"></span></li>
+</ol>
+<h2 id="BIOS"><a href="#BIOS" class="headerlink" title="BIOS"></a>BIOS</h2><p>BIOS（Basic Input/Output System）是基本输入输出系统，它为电脑提供最低级、最直接的硬件控制与支持，是联系底层的硬件系统和软件系统的桥梁。为了在关机后使 BIOS 不会丢失，早期的 BIOS 存储在 ROM（Read-Only Memory）中，并且其大小不会超过 64KB；目前的 BIOS 大多有 1MB 到 2MB，所以会被存储在 闪存（Flash Memory）中。</p>
+<p>BIOS 是一组固化到计算机主板上一个 ROM 芯片中的程序，它保存着计算机最重要的基本输入输出的程序、开机后自检程序和系统自启动程序，它可从 CMOS（一种 RAM 芯片）中读写系统设置的具体信息。</p>
+<p>BIOS 通常与硬件系统集成在一起（在计算机主板的 ROM 或 EEPROM 中），所以也被称为固件。</p>
+<h2 id="BIOS-执行流程"><a href="#BIOS-执行流程" class="headerlink" title="BIOS 执行流程"></a>BIOS 执行流程</h2><p>BIOS 存放在 ROM 中，所以断电后不会丢失。电脑开机时，CPU 加电后会跳转到 BIOS 的第一条指令的物理地址 0xFFFF0 上，BIOS 开始执行。</p>
+<ol>
+<li>第一次启动检查计算机硬件和外围设备（第二次自检由内核完成），例如 CPU、内存、风扇灯。当 BIOS 启动，就会做一个自我检测的工作，自检过程被称为 POST（Power On Self Test）；</li>
+<li>如果自检没有问题，BIOS 开始对硬件进行初始化，并规定当前可启动设备的先后顺序，选择由哪个设备来开机。<br>选择好开机设备后，就会从该设备的 MBR（主引导目录）中读取 Boot Loader（启动引导程序）并执行。启动引导程序用于引导操作系统启动（例如 GRUB）。</li>
+</ol>
+<p>当 MBR 被加载到 RAM 之后，BIOS 就会将控制权交给 MBR，进入系统引导的第二阶段。</p>
+<ul>
+<li>硬件自检（Power-On Self Test，POST）</li>
+</ul>
+<p>如果硬件出现问题，主板会发出蜂鸣，终止启动；否则检查没有问题，则 BIOS 调用 GPU 在屏幕上显示出 CPU、内存、硬盘等相关信息。BIOS 在执行完硬件自检和初始化后，将自己复制到从 0xA0000 开始的物理内存中继续执行。</p>
+<h2 id="UEFI-与-BIOS"><a href="#UEFI-与-BIOS" class="headerlink" title="UEFI 与 BIOS"></a>UEFI 与 BIOS</h2><p>BIOS 存在一些问题：</p>
+<ol>
+<li>开发效率低：BIOS 使用汇编语言开发，开发效率较低，代码与硬件密切相关，耦合性高，难以移植；</li>
+<li>性能较低：BIOS 基本输出/输出服务需要通过中断完成，导致开销，且 BIOS 没有提供异步工作模式，将在等待时消耗时间；</li>
+<li>功能扩展性差：BIOS 代码采用静态链接，需要增加硬件功能时，必须将 16 位代码放置在 0x0C0000~0x0DFFFF 地址，初始化时将其设置为约定的中断处理程序。而且 BIOS 没有提供动态加载设备驱动的方案；</li>
+<li>安全性：BIOS 运行过程没有考虑任何安全性；</li>
+<li>不支持从硬盘 2T 容量以上的地址引导，受限于 BIOS 的寻址方式，BIOS 硬盘采用 32 位地址，那么引导扇区的最大逻辑地址是 2^32，约为 <code>2^32 * 512 = 2T</code>。</li>
+</ol>
+<p>为了解决 BIOS 的问题，UEFI 产生了。</p>
+<p>UEFI（Unified Extensible Firmware Interface）是统一可扩展固件接口，它是一种个人电脑规格，用来定义操作系统与系统固件之间的软件接口，作为 BIOS 的替代方案，UEFI 负责加电自检（POST），联系操作系统以及提供连接操作系统与硬件的接口。</p>
+<p>EFI 引导管理员与 EFI drivers 的沟通方式（图片来自维基百科）：</p>
+<p><img src="./efi_flowchart_extended.jpg" alt="efi_flowchart_extended.jpg"></p>
+<p>UEFI 优于 BIOS 的几个特点：</p>
+<ol>
+<li>EFI 是使用模块化、C 语言风格的参数堆栈传递方式以及动态链接的形式构建的系统，相对于 BIOS 而言更容易实现，同时具有更强的容错性，降低开发时间；</li>
+<li>运行于 32 位或 64 位模式，面对未来的增强处理器模式下，能够突破 BIOS 16 位代码的寻址能力，达到处理器最大寻址；</li>
+<li>UEFI 具有良好的鼠标操控图形和界面，开机速度也优于 BIOS。</li>
+</ol>
+<p>BIOS 启动过程：</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">[ Power-On ] -&gt; [ BIOS Initializtion ] -&gt; [ POST ] -&gt; [ Load OS ] -&gt; [ Enter OS ]</span><br></pre></td></tr></table></figure>
+
+
+
+<p>UEFI 过程：</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">[ Power-On ] -&gt; [ UEFI Initializtion ] -&gt; [ Load OS ] -&gt; [ Enter OS ]</span><br></pre></td></tr></table></figure>
+
+
+
+<h2 id="MBR"><a href="#MBR" class="headerlink" title="MBR"></a>MBR</h2><p>MBR（Master Boot Record）是主引导记录或者开机记录，是一个 512 byte 的扇区，位于磁盘的固定位置。</p>
+<p>MBR 存在于硬盘驱动器最开始部分的一个特殊扇区，这个扇区包含已安装的操作系统启动记录器和驱动器的逻辑分区信息。BIOS 完成 POST 和初始化后，会根据 CMOS 中设定的启动顺序选择引导的设备，设备可以是 U 盘或硬盘。如果为硬盘，则 BIOS 就会读取 MBR，MBR 中包含了一段引导程序，一个分区表和 Magic Number。</p>
+<p>MBR 结构图：</p>
+<p><img src="./mbr_strcut.png" alt="mbr_strcut.png"></p>
+<p>标准 MBR 结构描述：</p>
+<table>
+<thead>
+<tr>
+<th>地址</th>
+<th>描述</th>
+<th>长度（字节）</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>0000</td>
+<td>代码区</td>
+<td>440（最大 460）</td>
+</tr>
+<tr>
+<td>01B8</td>
+<td>磁盘标志</td>
+<td>4</td>
+</tr>
+<tr>
+<td>01BC</td>
+<td>一般为空值；0x0000</td>
+<td>2</td>
+</tr>
+<tr>
+<td>01BE</td>
+<td>标准 MBR 分区表规划（4 个主分区表入口）</td>
+<td>64</td>
+</tr>
+<tr>
+<td>01FE</td>
+<td>MBR 有效标志（Magic Number）：0x55FA</td>
+<td>2</td>
+</tr>
+</tbody></table>
+<p>MBR，总大小：<code>446 + 64 + 2 =  512 byte</code></p>
+<p>分区表的长度为 64 byte，共有 4 项，每个 16 byte，那么一个硬盘只能分为 4 个一级分区。</p>
+<p>每个分区表项结构描述如下：</p>
+<table>
+<thead>
+<tr>
+<th>偏移</th>
+<th>长度（字节）</th>
+<th>描述</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>00H</td>
+<td>1</td>
+<td>分区状态：00 非活动分区；80 活动分区；其他无意义</td>
+</tr>
+<tr>
+<td>01H</td>
+<td>1</td>
+<td>分区起始磁头号（HEAD），用到全部 8 位</td>
+</tr>
+<tr>
+<td>02H</td>
+<td>2</td>
+<td>分区起始扇区号（SECTOR），占据 02H 的 0－5 位；该分区的起始磁柱号（CYLINDER），占据 02H 的 6－7 位和 03H 的全部 8 位</td>
+</tr>
+<tr>
+<td>04H</td>
+<td>1</td>
+<td>文件系统标志位</td>
+</tr>
+<tr>
+<td>05H</td>
+<td>1</td>
+<td>分区结束磁头号（HEAD），用到全部8位</td>
+</tr>
+<tr>
+<td>06H</td>
+<td>2</td>
+<td>分区结束扇区号（SECTOR），占据 06H 的 0－5 位；该分区的结束磁柱号（CYLINDER），占据 06H 的 6－7 位和 07H 的全部 8 位</td>
+</tr>
+<tr>
+<td>08H</td>
+<td>4</td>
+<td>分区起始相对扇区号</td>
+</tr>
+<tr>
+<td>0CH</td>
+<td>4</td>
+<td>分区总的扇区数</td>
+</tr>
+</tbody></table>
+<p>在分出主分区后，其他部分可分为扩展分区，或者不分，扩展分区必须再分成若干逻辑分区后才能使用，所有的逻辑分区都是扩展分区。</p>
+<p>硬盘基本结构：</p>
+<p><img src="./disk_struct.png" alt="disk_struct.png"></p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">硬盘的容量 ＝ 主分区的容量 ＋ 扩展分区的容量</span><br></pre></td></tr></table></figure>
+
+
+
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">扩展分区的容量 ＝ 各个逻辑分区的容量之和</span><br></pre></td></tr></table></figure>
+
+
+
+<h2 id="GPT"><a href="#GPT" class="headerlink" title="GPT"></a>GPT</h2><p>GPT（GUID Partition Table）是全局唯一标识分区表，它是一个实体硬盘的分区表的结构布局的标准。它是 UEFI（可扩展固件接口）标准的一部分，被用于替代 BIOS 系统中的存储逻辑块地址和大小信息的主引导记录（MBR）分区表。对于那些扇区为512 byte 的磁盘，MBR 分区表不支持容量大于 2.2TB（2.2×1012 byte）的分区。</p>
+<h2 id="BootLoader"><a href="#BootLoader" class="headerlink" title="BootLoader"></a>BootLoader</h2><p>下图为 Linux 系统普通模式下的启动过程：</p>
+<p><img src="./bootloader_boot.png" alt="bootloader_boot.png"></p>
+<p>Boot Loader（启动引导加载程序）又叫做操作系统内核加载器（OS Kernel Loader），一个在操作系统内核运行前运行的一段小程序，通过这段小程序可以初始化硬件设备，建立内存空间的映射，将系统软硬件环境带到一个合适的状态，以便为最终调用操作系统内核准备好正确的环境。通常，Boot Loader 是严重地依赖于硬件而实现的，特别是在嵌入式世界。因此，在嵌入式世界里建立一个通用的 Boot Loader 几乎是不可能的。</p>
+<p>启动引导程序拥有以下功能：</p>
+<ol>
+<li>加载操作系统的内核。这是启动引导程序最主要的功能；</li>
+<li>拥有一个可以让用户选择的菜单，来选择到底启动哪个系统。如果安装过双 Windows 系统，就可以看到类似的选择菜单，不过这个选择菜单是由 Windows 的启动引导程序提供的，不是 GRUB；</li>
+<li>可以调用其他的启动引导程序，这是多系统启动的关键。需要注意的是，Windows 的启动引导程序不能调用 Linux 的启动引导程序，所以一般建议先安装 Windows，后安装 Linux，是为了将 Linux 的启动引导程序安装到 MBR 中，覆盖 Windows 的启动引导程序。</li>
+</ol>
+<p>Lniux 下的 Boot Loader 程序常见有两种：LILO 和 GNU GRUB。</p>
+<p>LILO 没有命令交互界面，不支持网络引导，MBR 配置错误将导致系统无法引导；</p>
+<p>GRUB 具有命令交互界面，支持网络引导，如果 MBR 配置出现错误，则默认跳转到 GRUB 命令行界面。</p>
+<p>早期的 LILO 引导程序已经不常见了，GRUB 拥有更多优势：</p>
+<ol>
+<li>支持更多的文件系统;</li>
+<li>GRUB 的主程序可以直接在文件系统中查找内核文件；</li>
+<li>在系统启动时，可以利用 GRUB 的交互界面编辑和修改启动选项；</li>
+<li>可以动态修改 GRUB 的配置文件，这样在修改配置文件之后不需要重新安装 GRUB，而只需重新启动就可以生效。</li>
+</ol>
+<h2 id="GRUB-引导内核的过程"><a href="#GRUB-引导内核的过程" class="headerlink" title="GRUB 引导内核的过程"></a>GRUB 引导内核的过程</h2><p>按照启动流程，BIOS 在完成自检后，会到第一个启动设备的 MBR 中读取 GRUB。在 MBR 中用来放置启动引导程序的空间只有 446 Byte，不足以容纳 GRUB 主程序代码，那么 Linux 将 GRUB 的程序分为三段执行：</p>
+<ul>
+<li>Stage 1：执行 GRUB 主程序</li>
+</ul>
+<p>第一阶段用来执行 GRUB 主程序，主程序必须放在启动区中（MBR 或者引导扇区中）。但是 MBR 容量有限，所以只能安装 GRUB 的最小的主程序，而不能安装 GRUB 的相关配置文件。这个主程序用来启动 Stage 1.5 和 Stage 2。</p>
+<ul>
+<li>Stage 1.5：识别不同的文件系统</li>
+</ul>
+<p>Stage 2 比较大，只能放在文件系统中（分区），但是 Stage 1 不能识别不同的文件系统，所以不能直接加载 Stage 2。这时需要先加载<br>Stage 1.5，由 Stage 1.5 来加载不同文件系统中的 Stage 2。</p>
+<p>Stage 1.5 没有放在文件系统中，而是在安装 GRUB 时，直接安装到紧跟 MBR 之后的 32KB 的空间中，这段硬盘空间是空白无用的，而且是没有文件系统的，所以 Stage 1 才能直接读取 Stage 1.5。读取了 Stage 1.5 后就能识别不同的文件系统，才能加载 Stage 2。</p>
+<ul>
+<li>Stage 2：加载 GRUB 的配置文件</li>
+</ul>
+<p>加载 GRUB 的配置文件 /boot/grub/grub.conf，根据配置文件中的定义，加载内核和虚拟文件系统。接下来内核就可以接管启动过程，继续自检与加载硬件模块了。</p>
+<h2 id="Linux-Kernel-加载"><a href="#Linux-Kernel-加载" class="headerlink" title="Linux Kernel 加载"></a>Linux Kernel 加载</h2><ol>
+<li>根据 GRUB 设定的内核映像所在路径，系统读取内存映像，并进行解压缩内核；</li>
+<li>系统将内核解解压至内存中，调用初始化函数初始化各种设备，完成 Linux 核心环境的建立。</li>
+</ol>
+<h2 id="启动流程图"><a href="#启动流程图" class="headerlink" title="启动流程图"></a>启动流程图</h2><p><img src="./boot_flow.png" alt="boot_flow.png"></p>
+<h2 id="CentOS-6-x-系统启动过程"><a href="#CentOS-6-x-系统启动过程" class="headerlink" title="CentOS 6.x 系统启动过程"></a>CentOS 6.x 系统启动过程</h2><ol>
+<li>电脑加电，加载 BIOS 信息，BIOS 进行系统检测。依照 BIOS 设定，找到第一个可以启动的设备（一般是硬盘）；</li>
+<li>读取第一个启动设备的 MBR (主引导记录），加载 MBR 中的 Boot Loader（启动引导程序，常见为 GRUB）；</li>
+<li>依据 Boot Loader 的设置加载内核，内核会再进行一遍系统检测。系统一般会采用内核检测硬件的信息，而不一定采用 BIOS 的自检信息。内核在检测硬件的同时，还会通过加载动态模块的形式加载硬件的驱动；</li>
+<li>内核启动系统的第一个进程，也就是 /sbin/init；</li>
+<li>由 /sbin/init 进程调用 /etc/init/rcS.conf 配置文件，通过这个配置文件调用 /etc/rc.d/rc.sysinit 配置文件。而 /etc/rc.d/rc.sysinit 配置文件是用来进行系统初始化的，主要用于配置计算机的初始环境；</li>
+<li>还是通过 /etc/init/rcS.conf 配置文件调用 /etc/inittab 配置文件。通过 /etc/inittab 配置文件来确定系统的默认运行级别；</li>
+<li>确定默认运行级别后，调用 /etc/init/rc.conf 配置文件；</li>
+<li>通过 /etc/init/rc.conf 配置文件调用并执行 /etc/rc.d/rc 脚本，并传入运行级别参数；</li>
+<li>/etc/rc.d/rc 确定传入的运行级别，然后运行相应的运行级别目录 /etc/rc[0-6].d/ 中的脚本；</li>
+<li>/etc/rc[0-6].d/ 目录中的脚本依据设定好的优先级依次启动和关闭；</li>
+<li>最后执行 /etc/rc.d/rc.local 中的程序；</li>
+<li>如果是字符界面启动，就可以看到登录界面了。如果是图形界面启动，就会调用相应的 X Window 接口；</li>
+</ol>
+<h2 id="其他"><a href="#其他" class="headerlink" title="其他"></a>其他</h2><p>Android 设备启动过程</p>
+<p>Android 设备与 PC 的硬件差异较大，虽然启动过程不相同，但是过程类似。</p>
+<p>Android 设备通用启动流程图：</p>
+<p><img src="./android_boot.png" alt="android_boot.png"></p>
+<h2 id="参考"><a href="#参考" class="headerlink" title="参考"></a>参考</h2><ul>
+<li><p><a target="_blank" rel="noopener" href="https://www.cnblogs.com/adamwong/p/10582183.html">https://www.cnblogs.com/adamwong/p/10582183.html</a></p>
+</li>
+<li><p><a target="_blank" rel="noopener" href="http://c.biancheng.net/linux_tutorial/">http://c.biancheng.net/linux_tutorial/</a></p>
+</li>
+</ul>
+</div><div class="article-licensing box"><div class="licensing-title"><p>计算机启动原理</p><p><a href="https://l0neman.github.io/2020/08/09/计算机启动原理/">https://l0neman.github.io/2020/08/09/计算机启动原理/</a></p></div><div class="licensing-meta level is-mobile"><div class="level-left"><div class="level-item is-narrow"><div><h6>作者</h6><p>l0neman</p></div></div><div class="level-item is-narrow"><div><h6>发布于</h6><p>2020-08-09</p></div></div><div class="level-item is-narrow"><div><h6>更新于</h6><p>2020-08-09</p></div></div><div class="level-item is-narrow"><div><h6>许可协议</h6><p><a class="icons" rel="noopener" target="_blank" title="Creative Commons" href="https://creativecommons.org/"><i class="icon fab fa-creative-commons"></i></a><a class="icons" rel="noopener" target="_blank" title="Attribution" href="https://creativecommons.org/licenses/by/4.0/"><i class="icon fab fa-creative-commons-by"></i></a><a class="icons" rel="noopener" target="_blank" title="Noncommercial" href="https://creativecommons.org/licenses/by-nc/4.0/"><i class="icon fab fa-creative-commons-nc"></i></a></p></div></div></div></div></div><div class="article-tags is-size-7 mb-4"><span class="mr-2">#</span><a class="link-muted mr-2" rel="tag" href="/tags/computer/">Computer</a></div><div class="addthis_inline_share_toolbox"></div><script src="//s7.addthis.com/js/300/addthis_widget.js#pubid=ra-5f0f12c19a2af379" defer></script></article></div><div class="card"><div class="card-content"><h3 class="menu-label has-text-centered">喜欢这篇文章？打赏一下作者吧</h3><div class="buttons is-centered"><a class="button donate" data-type="alipay"><span class="icon is-small"><i class="fab fa-alipay"></i></span><span>支付宝</span><span class="qrcode"><img src="/img/qrcode/alipay.jpg" alt="支付宝"></span></a><a class="button donate" data-type="wechat"><span class="icon is-small"><i class="fab fa-weixin"></i></span><span>微信</span><span class="qrcode"><img src="/img/qrcode/wxpay.jpg" alt="微信"></span></a></div></div></div><nav class="post-navigation mt-4 level is-mobile"><div class="level-start"><a class="article-nav-prev level level-item link-muted" href="/2020/08/17/android-init-%E8%BF%9B%E7%A8%8B%E5%90%AF%E5%8A%A8%E5%88%86%E6%9E%90/"><i class="level-item fas fa-chevron-left"></i><span class="level-item">Android init 进程启动分析</span></a></div><div class="level-end"><a class="article-nav-next level level-item link-muted" href="/2020/07/27/android-%E5%BA%94%E7%94%A8%E8%BF%9B%E7%A8%8B-servicemanager-%E7%9A%84%E5%AE%9E%E7%8E%B0/"><span class="level-item">Android 应用进程 ServiceManager 的实现</span><i class="level-item fas fa-chevron-right"></i></a></div></nav><div class="card"><div class="card-content"><h3 class="title is-5">评论</h3><script src="https://utteranc.es/client.js" repo="l0neman/l0neman.github.io" issue-term="pathname" label="comment" theme="github-light" crossorigin="anonymous" async></script></div></div></div><!--!--><div class="column column-right  order-3 is-sticky"><div class="card widget" id="toc" data-type="toc"><div class="card-content"><div class="menu"><h3 class="menu-label">目录</h3><ul class="menu-list"><li><a class="level is-mobile" href="#启动流程概述"><span class="level-left"><span class="level-item">1</span><span class="level-item">启动流程概述</span></span></a></li><li><a class="level is-mobile" href="#BIOS"><span class="level-left"><span class="level-item">2</span><span class="level-item">BIOS</span></span></a></li><li><a class="level is-mobile" href="#BIOS-执行流程"><span class="level-left"><span class="level-item">3</span><span class="level-item">BIOS 执行流程</span></span></a></li><li><a class="level is-mobile" href="#UEFI-与-BIOS"><span class="level-left"><span class="level-item">4</span><span class="level-item">UEFI 与 BIOS</span></span></a></li><li><a class="level is-mobile" href="#MBR"><span class="level-left"><span class="level-item">5</span><span class="level-item">MBR</span></span></a></li><li><a class="level is-mobile" href="#GPT"><span class="level-left"><span class="level-item">6</span><span class="level-item">GPT</span></span></a></li><li><a class="level is-mobile" href="#BootLoader"><span class="level-left"><span class="level-item">7</span><span class="level-item">BootLoader</span></span></a></li><li><a class="level is-mobile" href="#GRUB-引导内核的过程"><span class="level-left"><span class="level-item">8</span><span class="level-item">GRUB 引导内核的过程</span></span></a></li><li><a class="level is-mobile" href="#Linux-Kernel-加载"><span class="level-left"><span class="level-item">9</span><span class="level-item">Linux Kernel 加载</span></span></a></li><li><a class="level is-mobile" href="#启动流程图"><span class="level-left"><span class="level-item">10</span><span class="level-item">启动流程图</span></span></a></li><li><a class="level is-mobile" href="#CentOS-6-x-系统启动过程"><span class="level-left"><span class="level-item">11</span><span class="level-item">CentOS 6.x 系统启动过程</span></span></a></li><li><a class="level is-mobile" href="#其他"><span class="level-left"><span class="level-item">12</span><span class="level-item">其他</span></span></a></li><li><a class="level is-mobile" href="#参考"><span class="level-left"><span class="level-item">13</span><span class="level-item">参考</span></span></a></li></ul></div></div><style>#toc .menu-list > li > a.is-active + .menu-list { display: block; }#toc .menu-list > li > a + .menu-list { display: none; }</style><script src="/js/toc.js" defer></script></div><div class="card widget" data-type="categories"><div class="card-content"><div class="menu"><h3 class="menu-label">分类</h3><ul class="menu-list"><li><a class="level is-mobile" href="/categories/android-%E5%AE%9E%E7%94%A8%E5%B7%A5%E5%85%B7/"><span class="level-start"><span class="level-item">Android 实用工具</span></span><span class="level-end"><span class="level-item tag">4</span></span></a></li><li><a class="level is-mobile" href="/categories/android-%E5%BA%94%E7%94%A8%E5%BC%80%E5%8F%91/"><span class="level-start"><span class="level-item">Android 应用开发</span></span><span class="level-end"><span class="level-item tag">11</span></span></a></li><li><a class="level is-mobile" href="/categories/android-%E7%B3%BB%E7%BB%9F%E5%8E%9F%E7%90%86/"><span class="level-start"><span class="level-item">Android 系统原理</span></span><span class="level-end"><span class="level-item tag">5</span></span></a></li><li><a class="level is-mobile" href="/categories/android-%E9%80%86%E5%90%91%E5%B7%A5%E7%A8%8B/"><span class="level-start"><span class="level-item">Android 逆向工程</span></span><span class="level-end"><span class="level-item tag">5</span></span></a></li><li><a class="level is-mobile" href="/categories/%E5%8F%82%E8%80%83%E6%96%87%E6%A1%A3/"><span class="level-start"><span class="level-item">参考文档</span></span><span class="level-end"><span class="level-item tag">2</span></span></a></li><li><a class="level is-mobile" href="/categories/%E5%AE%9E%E7%94%A8%E5%B7%A5%E5%85%B7/"><span class="level-start"><span class="level-item">实用工具</span></span><span class="level-end"><span class="level-item tag">1</span></span></a></li><li><a class="level is-mobile" href="/categories/%E7%BC%96%E7%A8%8B%E5%9F%BA%E7%A1%80/"><span class="level-start"><span class="level-item">编程基础</span></span><span class="level-end"><span class="level-item tag">4</span></span></a></li></ul></div></div></div><div class="card widget" data-type="recent-posts"><div class="card-content"><h3 class="menu-label">最新文章</h3><article class="media"><div class="media-content"><p class="date"><time dateTime="2021-06-29T16:45:50.000Z">2021-06-30</time></p><p class="title"><a href="/2021/06/30/%E6%94%AF%E6%8C%81%E8%A7%A6%E6%91%B8%E6%8B%96%E5%8A%A8%E7%9A%84-touchdelegate/">支持触摸拖动的 TouchDelegate</a></p><p class="categories"><a href="/categories/android-%E5%BA%94%E7%94%A8%E5%BC%80%E5%8F%91/">Android 应用开发</a></p></div></article><article class="media"><div class="media-content"><p class="date"><time dateTime="2021-04-21T15:08:15.000Z">2021-04-21</time></p><p class="title"><a href="/2021/04/21/gdb-arm-%E4%BA%A4%E5%8F%89%E7%BC%96%E8%AF%91%E7%8E%AF%E5%A2%83%E6%90%AD%E5%BB%BA/">GDB ARM 交叉编译环境搭建</a></p><p class="categories"><a href="/categories/android-%E5%AE%9E%E7%94%A8%E5%B7%A5%E5%85%B7/">Android 实用工具</a></p></div></article><article class="media"><div class="media-content"><p class="date"><time dateTime="2021-04-21T15:04:39.000Z">2021-04-21</time></p><p class="title"><a href="/2021/04/21/dropbear-android-%E5%AE%89%E8%A3%85%E6%AD%A5%E9%AA%A4/">Dropbear Android 安装步骤</a></p><p class="categories"><a href="/categories/android-%E5%AE%9E%E7%94%A8%E5%B7%A5%E5%85%B7/">Android 实用工具</a></p></div></article><article class="media"><div class="media-content"><p class="date"><time dateTime="2021-04-21T14:49:48.000Z">2021-04-21</time></p><p class="title"><a href="/2021/04/21/material-design-%E5%8F%82%E8%80%83/">Material Design 参考</a></p><p class="categories"><a href="/categories/%E5%8F%82%E8%80%83%E6%96%87%E6%A1%A3/">参考文档</a></p></div></article><article class="media"><div class="media-content"><p class="date"><time dateTime="2021-04-21T10:20:58.000Z">2021-04-21</time></p><p class="title"><a href="/2021/04/21/android-avd-%E4%BD%8D%E7%BD%AE%E4%BF%AE%E6%94%B9/">Android AVD 位置修改</a></p><p class="categories"><a href="/categories/android-%E5%AE%9E%E7%94%A8%E5%B7%A5%E5%85%B7/">Android 实用工具</a></p></div></article></div></div><div class="card widget" data-type="archives"><div class="card-content"><div class="menu"><h3 class="menu-label">归档</h3><ul class="menu-list"><li><a class="level is-mobile" href="/archives/2021/06/"><span class="level-start"><span class="level-item">六月 2021</span></span><span class="level-end"><span class="level-item tag">1</span></span></a></li><li><a class="level is-mobile" href="/archives/2021/04/"><span class="level-start"><span class="level-item">四月 2021</span></span><span class="level-end"><span class="level-item tag">4</span></span></a></li><li><a class="level is-mobile" href="/archives/2021/01/"><span class="level-start"><span class="level-item">一月 2021</span></span><span class="level-end"><span class="level-item tag">1</span></span></a></li><li><a class="level is-mobile" href="/archives/2020/11/"><span class="level-start"><span class="level-item">十一月 2020</span></span><span class="level-end"><span class="level-item tag">1</span></span></a></li><li><a class="level is-mobile" href="/archives/2020/10/"><span class="level-start"><span class="level-item">十月 2020</span></span><span class="level-end"><span class="level-item tag">1</span></span></a></li><li><a class="level is-mobile" href="/archives/2020/09/"><span class="level-start"><span class="level-item">九月 2020</span></span><span class="level-end"><span class="level-item tag">2</span></span></a></li><li><a class="level is-mobile" href="/archives/2020/08/"><span class="level-start"><span class="level-item">八月 2020</span></span><span class="level-end"><span class="level-item tag">3</span></span></a></li><li><a class="level is-mobile" href="/archives/2020/07/"><span class="level-start"><span class="level-item">七月 2020</span></span><span class="level-end"><span class="level-item tag">7</span></span></a></li><li><a class="level is-mobile" href="/archives/2020/06/"><span class="level-start"><span class="level-item">六月 2020</span></span><span class="level-end"><span class="level-item tag">4</span></span></a></li><li><a class="level is-mobile" href="/archives/2020/05/"><span class="level-start"><span class="level-item">五月 2020</span></span><span class="level-end"><span class="level-item tag">1</span></span></a></li><li><a class="level is-mobile" href="/archives/2019/04/"><span class="level-start"><span class="level-item">四月 2019</span></span><span class="level-end"><span class="level-item tag">1</span></span></a></li><li><a class="level is-mobile" href="/archives/2019/02/"><span class="level-start"><span class="level-item">二月 2019</span></span><span class="level-end"><span class="level-item tag">5</span></span></a></li></ul></div></div></div><div class="card widget" data-type="tags"><div class="card-content"><div class="menu"><h3 class="menu-label">标签</h3><div class="field is-grouped is-grouped-multiline"><div class="control"><a class="tags has-addons" href="/tags/arm/"><span class="tag">ARM</span><span class="tag">1</span></a></div><div class="control"><a class="tags has-addons" href="/tags/avd/"><span class="tag">AVD</span><span class="tag">1</span></a></div><div class="control"><a class="tags has-addons" href="/tags/activity/"><span class="tag">Activity</span><span class="tag">1</span></a></div><div class="control"><a class="tags has-addons" href="/tags/android/"><span class="tag">Android</span><span class="tag">23</span></a></div><div class="control"><a class="tags has-addons" href="/tags/assembly/"><span class="tag">Assembly</span><span class="tag">2</span></a></div><div class="control"><a class="tags has-addons" href="/tags/binder/"><span class="tag">Binder</span><span class="tag">2</span></a></div><div class="control"><a class="tags has-addons" href="/tags/classloader/"><span class="tag">ClassLoader</span><span class="tag">1</span></a></div><div class="control"><a class="tags has-addons" href="/tags/computer/"><span class="tag">Computer</span><span class="tag">1</span></a></div><div class="control"><a class="tags has-addons" href="/tags/dex/"><span class="tag">Dex</span><span class="tag">1</span></a></div><div class="control"><a class="tags has-addons" href="/tags/elf/"><span class="tag">ELF</span><span class="tag">1</span></a></div><div class="control"><a class="tags has-addons" href="/tags/emulator/"><span class="tag">Emulator</span><span class="tag">1</span></a></div><div class="control"><a class="tags has-addons" href="/tags/git/"><span class="tag">Git</span><span class="tag">1</span></a></div><div class="control"><a class="tags has-addons" href="/tags/jni/"><span class="tag">JNI</span><span class="tag">2</span></a></div><div class="control"><a class="tags has-addons" href="/tags/java/"><span class="tag">Java</span><span class="tag">1</span></a></div><div class="control"><a class="tags has-addons" href="/tags/log/"><span class="tag">Log</span><span class="tag">1</span></a></div><div class="control"><a class="tags has-addons" href="/tags/make/"><span class="tag">Make</span><span class="tag">1</span></a></div><div class="control"><a class="tags has-addons" href="/tags/makefile/"><span class="tag">Makefile</span><span class="tag">1</span></a></div><div class="control"><a class="tags has-addons" href="/tags/markdown/"><span class="tag">MarkDown</span><span class="tag">1</span></a></div><div class="control"><a class="tags has-addons" href="/tags/metrial/"><span class="tag">Metrial</span><span class="tag">1</span></a></div><div class="control"><a class="tags has-addons" href="/tags/ndk/"><span class="tag">NDK</span><span class="tag">4</span></a></div><div class="control"><a class="tags has-addons" href="/tags/regex/"><span class="tag">Regex</span><span class="tag">1</span></a></div><div class="control"><a class="tags has-addons" href="/tags/ssh/"><span class="tag">SSH</span><span class="tag">1</span></a></div><div class="control"><a class="tags has-addons" href="/tags/theme/"><span class="tag">Theme</span><span class="tag">1</span></a></div><div class="control"><a class="tags has-addons" href="/tags/touch/"><span class="tag">Touch</span><span class="tag">1</span></a></div><div class="control"><a class="tags has-addons" href="/tags/view/"><span class="tag">View</span><span class="tag">4</span></a></div><div class="control"><a class="tags has-addons" href="/tags/xposed/"><span class="tag">Xposed</span><span class="tag">2</span></a></div><div class="control"><a class="tags has-addons" href="/tags/zygote/"><span class="tag">Zygote</span><span class="tag">2</span></a></div><div class="control"><a class="tags has-addons" href="/tags/aapt/"><span class="tag">aapt</span><span class="tag">2</span></a></div><div class="control"><a class="tags has-addons" href="/tags/%E7%83%AD%E4%BF%AE%E5%A4%8D/"><span class="tag">热修复</span><span class="tag">1</span></a></div><div class="control"><a class="tags has-addons" href="/tags/%E7%83%AD%E6%9B%B4%E6%96%B0/"><span class="tag">热更新</span><span class="tag">1</span></a></div></div></div></div></div></div></div></div></section><footer class="footer"><div class="container"><div class="level"><div class="level-start"><a class="footer-logo is-block mb-2" href="/"><img src="/img/logo.png" alt="l0neman 的博客" height="28"></a><p class="is-size-7"><span>&copy; 2021 l0neman</span>  Powered by <a href="https://hexo.io/" target="_blank" rel="noopener">Hexo</a> &amp; <a href="https://github.com/ppoffice/hexo-theme-icarus" target="_blank" rel="noopener">Icarus</a><br><span id="busuanzi_container_site_uv">共<span id="busuanzi_value_site_uv">0</span>个访客</span></p></div><div class="level-end"><div class="field has-addons"><p class="control"><a class="button is-transparent is-large" target="_blank" rel="noopener" title="Creative Commons" href="https://creativecommons.org/"><i class="fab fa-creative-commons"></i></a></p><p class="control"><a class="button is-transparent is-large" target="_blank" rel="noopener" title="Attribution 4.0 International" href="https://creativecommons.org/licenses/by/4.0/"><i class="fab fa-creative-commons-by"></i></a></p><p class="control"><a class="button is-transparent is-large" target="_blank" rel="noopener" title="Download on GitHub" href="https://github.com/l0neman"><i class="fab fa-github"></i></a></p></div></div></div></div></footer><script src="https://cdn.jsdelivr.net/npm/jquery@3.3.1/dist/jquery.min.js"></script><script src="https://cdn.jsdelivr.net/npm/moment@2.22.2/min/moment-with-locales.min.js"></script><script src="https://cdn.jsdelivr.net/npm/clipboard@2.0.4/dist/clipboard.min.js" defer></script><script>moment.locale("zh-CN");</script><script>var IcarusThemeSettings = {
+            article: {
+                highlight: {
+                    clipboard: true,
+                    fold: 'unfolded'
+                }
+            }
+        };</script><script src="/js/column.js"></script><script src="/js/animation.js"></script><a id="back-to-top" title="回到顶端" href="javascript:;"><i class="fas fa-chevron-up"></i></a><script src="/js/back_to_top.js" defer></script><!--!--><!--!--><!--!--><script src="https://cdn.jsdelivr.net/npm/cookieconsent@3.1.1/build/cookieconsent.min.js" defer></script><script>window.addEventListener("load", () => {
+      window.cookieconsent.initialise({
+        type: "info",
+        theme: "edgeless",
+        static: false,
+        position: "bottom-left",
+        content: {
+          message: "此网站使用Cookie来改善您的体验。",
+          dismiss: "知道了！",
+          allow: "允许使用Cookie",
+          deny: "拒绝",
+          link: "了解更多",
+          policy: "Cookie政策",
+          href: "https://www.cookiesandyou.com/",
+        },
+        palette: {
+          popup: {
+            background: "#edeff5",
+            text: "#838391"
+          },
+          button: {
+            background: "#4b81e8"
+          },
+        },
+      });
+    });</script><script src="https://cdn.jsdelivr.net/npm/lightgallery@1.6.8/dist/js/lightgallery.min.js" defer></script><script src="https://cdn.jsdelivr.net/npm/justifiedGallery@3.7.0/dist/js/jquery.justifiedGallery.min.js" defer></script><script>window.addEventListener("load", () => {
+            if (typeof $.fn.lightGallery === 'function') {
+                $('.article').lightGallery({ selector: '.gallery-item' });
+            }
+            if (typeof $.fn.justifiedGallery === 'function') {
+                if ($('.justified-gallery > p > .gallery-item').length) {
+                    $('.justified-gallery > p > .gallery-item').unwrap();
+                }
+                $('.justified-gallery').justifiedGallery();
+            }
+        });</script><!--!--><!--!--><!--!--><!--!--><!--!--><script src="/js/main.js" defer></script><div class="searchbox"><div class="searchbox-container"><div class="searchbox-header"><div class="searchbox-input-container"><input class="searchbox-input" type="text" placeholder="想要查找什么..."></div><a class="searchbox-close" href="javascript:;">×</a></div><div class="searchbox-body"></div></div></div><script src="/js/insight.js" defer></script><script>document.addEventListener('DOMContentLoaded', function () {
+            loadInsight({"contentUrl":"/content.json"}, {"hint":"想要查找什么...","untitled":"(无标题)","posts":"文章","pages":"页面","categories":"分类","tags":"标签"});
+        });</script></body></html>
